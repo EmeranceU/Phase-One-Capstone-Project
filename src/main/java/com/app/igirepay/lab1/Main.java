@@ -1,4 +1,4 @@
-package com.igirepay.lab1;
+package com.app.igirepay.lab1;
 
 public class Main {
 }
