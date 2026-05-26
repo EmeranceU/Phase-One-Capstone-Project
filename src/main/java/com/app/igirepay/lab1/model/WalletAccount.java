@@ -25,15 +25,31 @@ public class WalletAccount extends Account {
 			return false;
 		}
 
-		if (isDepositType(transaction.getTransactionType())) {
-			deposit(transaction.getAmount());
+		String transactionType = transaction.getTransactionType();
+ 		BigDecimal amount = transaction.getAmount();
+
+		if (isDepositType(transactionType)) {
+			deposit(amount);
 			return true;
 		}
 
-		if (isWithdrawalType(transaction.getTransactionType())) {
-			return withdraw(transaction.getAmount());
+		if (isTransferInType(transactionType)) {
+			deposit(amount);
+			return true;
+		}
+
+		if (isWithdrawalType(transactionType) || isTransferOutType(transactionType)) {
+			return withdraw(amount);
 		}
 
 		return false;
+	}
+
+	private boolean isTransferInType(String transactionType) {
+		return transactionType != null && transactionType.equalsIgnoreCase("TRANSFER_IN");
+	}
+
+	private boolean isTransferOutType(String transactionType) {
+		return transactionType != null && transactionType.equalsIgnoreCase("TRANSFER_OUT");
 	}
 }
