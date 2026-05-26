@@ -6,13 +6,17 @@ import java.time.LocalDateTime;
 public class Transaction {
 
 	private String transactionId;
+	private String customerId;
+	private String accountId;
 	private String referenceId;
 	private BigDecimal amount;
 	private String transactionType;
 	private LocalDateTime timestamp;
 
-	public Transaction(String transactionId, String referenceId, BigDecimal amount, String transactionType, LocalDateTime timestamp) {
+	public Transaction(String transactionId, String customerId, String accountId, String referenceId, BigDecimal amount, String transactionType, LocalDateTime timestamp) {
 		this.transactionId = transactionId;
+		this.customerId = customerId;
+		this.accountId = accountId;
 		this.referenceId = referenceId;
 		this.amount = amount;
 		this.transactionType = transactionType;
@@ -25,6 +29,22 @@ public class Transaction {
 
 	public void setTransactionId(String transactionId) {
 		this.transactionId = transactionId;
+	}
+
+	public String getCustomerId() {
+		return customerId;
+	}
+
+	public void setCustomerId(String customerId) {
+		this.customerId = customerId;
+	}
+
+	public String getAccountId() {
+		return accountId;
+	}
+
+	public void setAccountId(String accountId) {
+		this.accountId = accountId;
 	}
 
 	public String getReferenceId() {
@@ -63,6 +83,8 @@ public class Transaction {
 	public String toString() {
 		return "Transaction{" +
 				"transactionId='" + transactionId + '\'' +
+				", customerId='" + customerId + '\'' +
+				", accountId='" + accountId + '\'' +
 				", referenceId='" + referenceId + '\'' +
 				", amount=" + amount +
 				", transactionType='" + transactionType + '\'' +

@@ -17,6 +17,7 @@ import com.app.igirepay.lab1.service.TransactionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -31,162 +32,118 @@ public class Main {
         TransactionService transactionService = new TransactionService();
         AuthService authService = new AuthService(accountService);
         LoanService loanService = new LoanService(accountService, transactionService);
-        Scanner scanner = new Scanner(System.in);
         Customer loggedInCustomer = null;
 
-        while (true) {
-            printMenu();
-            int choice = readChoice(scanner);
+        try (Scanner scanner = new Scanner(System.in)) {
+            while (true) {
+                if (loggedInCustomer == null) {
+                    loggedInCustomer = handleStartMenu(scanner, accountService, authService);
+                    continue;
+                }
 
-            switch (choice) {
-                case 1:
-                    createCustomer(scanner, accountService);
-                    break;
-                case 2:
-                    createWalletAccount(scanner, accountService);
-                    break;
-                case 3:
-                    createSavingsAccount(scanner, accountService);
-                    break;
-                case 4:
-                    depositMoney(scanner, accountService, transactionService);
-                    break;
-                case 5:
-                    withdrawMoney(scanner, accountService, transactionService);
-                    break;
-                case 6:
-                    viewCustomerAccounts(scanner, accountService);
-                    break;
-                case 7:
-                    viewTransactionHistory(transactionService);
-                    break;
-                case 8:
-                    loggedInCustomer = login(scanner, authService);
-                    break;
-                case 9:
-                    requestLoan(scanner, loanService, loggedInCustomer);
-                    break;
-                case 10:
-                    viewLoanHistory(loanService);
-                    break;
-                case 11:
-                    loggedInCustomer = changePin(scanner, authService, loggedInCustomer);
-                    break;
-                case 12:
-                    System.out.println("Goodbye.");
-                    scanner.close();
-                    return;
-                default:
-                    System.out.println("Invalid choice.");
-                    break;
+                loggedInCustomer = handleAuthenticatedMenu(scanner, loggedInCustomer, accountService, transactionService, authService, loanService);
             }
         }
     }
 
-    private static void printMenu() {
+    private static Customer handleStartMenu(Scanner scanner, AccountService accountService, AuthService authService) {
+        printStartMenu();
+        switch (readChoice(scanner)) {
+            case 1:
+                registerCustomer(scanner, accountService);
+                return null;
+            case 2:
+                return login(scanner, authService);
+            case 3:
+                System.out.println("Goodbye.");
+                System.exit(0);
+                return null;
+            default:
+                System.out.println("Invalid choice.");
+                return null;
+        }
+    }
+
+    private static Customer handleAuthenticatedMenu(Scanner scanner,
+                                                    Customer loggedInCustomer,
+                                                    AccountService accountService,
+                                                    TransactionService transactionService,
+                                                    AuthService authService,
+                                                    LoanService loanService) {
+        printAuthenticatedMenu();
+        switch (readChoice(scanner)) {
+            case 1:
+                createWalletAccount(scanner, accountService, loggedInCustomer);
+                return loggedInCustomer;
+            case 2:
+                createSavingsAccount(scanner, accountService, loggedInCustomer);
+                return loggedInCustomer;
+            case 3:
+                depositMoney(scanner, accountService, transactionService, loggedInCustomer);
+                return loggedInCustomer;
+            case 4:
+                withdrawMoney(scanner, accountService, transactionService, loggedInCustomer);
+                return loggedInCustomer;
+            case 5:
+                viewMyAccounts(loggedInCustomer);
+                return loggedInCustomer;
+            case 6:
+                viewTransactionHistory(transactionService, loggedInCustomer);
+                return loggedInCustomer;
+            case 7:
+                requestLoan(scanner, loanService, loggedInCustomer);
+                return loggedInCustomer;
+            case 8:
+                viewLoanHistory(loanService, loggedInCustomer);
+                return loggedInCustomer;
+            case 9:
+                return changePin(scanner, authService, loggedInCustomer);
+            case 10:
+                System.out.println("Logged out.");
+                return null;
+            default:
+                System.out.println("Invalid choice.");
+                return loggedInCustomer;
+        }
+    }
+
+    private static void printStartMenu() {
         System.out.println();
-        System.out.println("=== Lab 1 Menu ===");
-        System.out.println("1. Create Customer");
-        System.out.println("2. Create Wallet Account");
-        System.out.println("3. Create Savings Account");
-        System.out.println("4. Deposit Money");
-        System.out.println("5. Withdraw Money");
-        System.out.println("6. View Customer Accounts");
-        System.out.println("7. View Transaction History");
-        System.out.println("8. Login");
-        System.out.println("9. Request Loan");
-        System.out.println("10. View Loan History");
-        System.out.println("11. Change PIN");
-        System.out.println("12. Exit");
+        System.out.println("=== IgirePay Lab 1 ===");
+        System.out.println("1. Register Customer");
+        System.out.println("2. Login");
+        System.out.println("3. Exit");
         System.out.print("Choose an option: ");
     }
 
-    private static void createCustomer(Scanner scanner, AccountService accountService) {
+    private static void printAuthenticatedMenu() {
+        System.out.println();
+        System.out.println("=== Authenticated Menu ===");
+        System.out.println("1. Create Wallet Account");
+        System.out.println("2. Create Savings Account");
+        System.out.println("3. Deposit Money");
+        System.out.println("4. Withdraw Money");
+        System.out.println("5. View My Accounts");
+        System.out.println("6. View Transaction History");
+        System.out.println("7. Request Loan");
+        System.out.println("8. View Loan History");
+        System.out.println("9. Change PIN");
+        System.out.println("10. Logout");
+        System.out.print("Choose an option: ");
+    }
+
+    private static void registerCustomer(Scanner scanner, AccountService accountService) {
         String fullName = readText(scanner, "Full name: ");
         String email = readText(scanner, "Email: ");
         String phoneNumber = readText(scanner, "Phone number: ");
         String pin = readText(scanner, "PIN: ");
 
         Customer customer = new Customer(String.valueOf(nextCustomerId++), fullName, email, phoneNumber, pin);
-        accountService.addCustomer(customer);
-        System.out.println("Customer created with ID: " + customer.getCustomerId());
-    }
-
-    private static void createWalletAccount(Scanner scanner, AccountService accountService) {
-        Customer customer = selectCustomer(scanner, accountService);
-        if (customer == null) {
-            return;
-        }
-
-        BigDecimal balance = readAmount(scanner, "Initial balance: ");
-        String pin = readText(scanner, "PIN: ");
-        WalletAccount account = new WalletAccount("WAL-" + nextWalletId++, customer.getCustomerId(), balance, pin);
-
-        if (accountService.addAccountToCustomer(customer.getCustomerId(), account)) {
-            System.out.println("Wallet account created: " + account.getAccountId());
+        if (accountService.addCustomer(customer)) {
+            System.out.println("Customer registered with ID: " + customer.getCustomerId());
         } else {
-            System.out.println("Unable to create wallet account.");
+            System.out.println("Unable to register customer.");
         }
-    }
-
-    private static void createSavingsAccount(Scanner scanner, AccountService accountService) {
-        Customer customer = selectCustomer(scanner, accountService);
-        if (customer == null) {
-            return;
-        }
-
-        BigDecimal balance = readAmount(scanner, "Initial balance: ");
-        String pin = readText(scanner, "PIN: ");
-        SavingsAccount account = new SavingsAccount("SAV-" + nextSavingsId++, customer.getCustomerId(), balance, pin);
-
-        if (accountService.addAccountToCustomer(customer.getCustomerId(), account)) {
-            System.out.println("Savings account created: " + account.getAccountId());
-        } else {
-            System.out.println("Unable to create savings account.");
-        }
-    }
-
-    private static void depositMoney(Scanner scanner, AccountService accountService, TransactionService transactionService) {
-        Account account = selectAccount(scanner, accountService);
-        if (account == null) {
-            return;
-        }
-
-        BigDecimal amount = readAmount(scanner, "Deposit amount: ");
-        String referenceId = readText(scanner, "Reference ID: ");
-        Transaction transaction = new Transaction(String.valueOf(nextTransactionId++), referenceId, amount, "DEPOSIT", LocalDateTime.now());
-
-        processAndReport(transactionService, account, transaction, "Deposit");
-    }
-
-    private static void withdrawMoney(Scanner scanner, AccountService accountService, TransactionService transactionService) {
-        Account account = selectAccount(scanner, accountService);
-        if (account == null) {
-            return;
-        }
-
-        BigDecimal amount = readAmount(scanner, "Withdrawal amount: ");
-        String referenceId = readText(scanner, "Reference ID: ");
-        Transaction transaction = new Transaction(String.valueOf(nextTransactionId++), referenceId, amount, "WITHDRAWAL", LocalDateTime.now());
-
-        processAndReport(transactionService, account, transaction, "Withdrawal");
-    }
-
-    private static void viewCustomerAccounts(Scanner scanner, AccountService accountService) {
-        Customer customer = selectCustomer(scanner, accountService);
-        if (customer == null) {
-            return;
-        }
-
-        System.out.println(customer);
-        customer.getAccounts().forEach(System.out::println);
-    }
-
-    private static void viewTransactionHistory(TransactionService transactionService) {
-        System.out.println("Transaction history:");
-        transactionService.getTransactionHistory().forEach(System.out::println);
-        System.out.println("Failed transaction logs:");
-        transactionService.getFailedTransactionLogs().forEach(System.out::println);
     }
 
     private static Customer login(Scanner scanner, AuthService authService) {
@@ -201,24 +158,6 @@ public class Main {
             System.out.println(exception.getMessage());
             return null;
         }
-    }
-
-    private static void requestLoan(Scanner scanner, LoanService loanService, Customer loggedInCustomer) {
-        if (loggedInCustomer == null) {
-            System.out.println("Please login first.");
-            return;
-        }
-
-        BigDecimal amount = readAmount(scanner, "Loan amount: ");
-        Loan loan = loanService.requestLoan(loggedInCustomer, amount);
-        System.out.println(loan.isApproved() ? "Loan approved: " + loan : "Loan rejected: " + loan);
-    }
-
-    private static void viewLoanHistory(LoanService loanService) {
-        System.out.println("Loan history:");
-        loanService.getLoanHistory().forEach(System.out::println);
-        System.out.println("Failed loan logs:");
-        loanService.getFailedLoanLogs().forEach(System.out::println);
     }
 
     private static Customer changePin(Scanner scanner, AuthService authService, Customer loggedInCustomer) {
@@ -236,24 +175,118 @@ public class Main {
         }
     }
 
-    private static Customer selectCustomer(Scanner scanner, AccountService accountService) {
-        String customerId = readText(scanner, "Customer ID: ");
-        Customer customer = accountService.findCustomerById(customerId);
-        if (customer == null) {
-            System.out.println("Customer not found.");
-        }
+    private static void createWalletAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
+        BigDecimal balance = readAmount(scanner, "Initial balance: ");
+        String pin = readText(scanner, "PIN: ");
+        WalletAccount account = new WalletAccount("WAL-" + nextWalletId++, loggedInCustomer.getCustomerId(), balance, pin);
 
-        return customer;
+        if (accountService.addAccountToCustomer(loggedInCustomer.getCustomerId(), account)) {
+            System.out.println("Wallet account created: " + account.getAccountId());
+        } else {
+            System.out.println("Unable to create wallet account.");
+        }
     }
 
-    private static Account selectAccount(Scanner scanner, AccountService accountService) {
-        String accountId = readText(scanner, "Account ID: ");
-        Account account = accountService.findAccountById(accountId);
+    private static void createSavingsAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
+        BigDecimal balance = readAmount(scanner, "Initial balance: ");
+        String pin = readText(scanner, "PIN: ");
+        SavingsAccount account = new SavingsAccount("SAV-" + nextSavingsId++, loggedInCustomer.getCustomerId(), balance, pin);
+
+        if (accountService.addAccountToCustomer(loggedInCustomer.getCustomerId(), account)) {
+            System.out.println("Savings account created: " + account.getAccountId());
+        } else {
+            System.out.println("Unable to create savings account.");
+        }
+    }
+
+    private static void depositMoney(Scanner scanner,
+                                     AccountService accountService,
+                                     TransactionService transactionService,
+                                     Customer loggedInCustomer) {
+        Account account = selectCustomerAccount(scanner, accountService, loggedInCustomer);
         if (account == null) {
-            System.out.println("Account not found.");
+            return;
         }
 
-        return account;
+        BigDecimal amount = readAmount(scanner, "Deposit amount: ");
+        String referenceId = readText(scanner, "Reference ID: ");
+        Transaction transaction = new Transaction(String.valueOf(nextTransactionId++),
+                loggedInCustomer.getCustomerId(),
+                account.getAccountId(),
+                referenceId,
+                amount,
+                "DEPOSIT",
+                LocalDateTime.now());
+
+        processAndReport(transactionService, account, transaction, "Deposit");
+    }
+
+    private static void withdrawMoney(Scanner scanner,
+                                      AccountService accountService,
+                                      TransactionService transactionService,
+                                      Customer loggedInCustomer) {
+        Account account = selectCustomerAccount(scanner, accountService, loggedInCustomer);
+        if (account == null) {
+            return;
+        }
+
+        BigDecimal amount = readAmount(scanner, "Withdrawal amount: ");
+        String referenceId = readText(scanner, "Reference ID: ");
+        Transaction transaction = new Transaction(String.valueOf(nextTransactionId++),
+                loggedInCustomer.getCustomerId(),
+                account.getAccountId(),
+                referenceId,
+                amount,
+                "WITHDRAWAL",
+                LocalDateTime.now());
+
+        processAndReport(transactionService, account, transaction, "Withdrawal");
+    }
+
+    private static void viewMyAccounts(Customer loggedInCustomer) {
+        System.out.println(loggedInCustomer);
+        loggedInCustomer.getAccounts().forEach(System.out::println);
+    }
+
+    private static void viewTransactionHistory(TransactionService transactionService, Customer loggedInCustomer) {
+        System.out.println("Transaction history:");
+        transactionService.getTransactionHistoryForCustomer(loggedInCustomer.getCustomerId()).forEach(System.out::println);
+        System.out.println("Failed transaction logs:");
+        transactionService.getFailedTransactionLogs().forEach(System.out::println);
+    }
+
+    private static void requestLoan(Scanner scanner, LoanService loanService, Customer loggedInCustomer) {
+        BigDecimal amount = readAmount(scanner, "Loan amount: ");
+        Loan loan = loanService.requestLoan(loggedInCustomer, amount);
+        System.out.println(loan.isApproved() ? "Loan approved: " + loan : "Loan rejected: " + loan);
+    }
+
+    private static void viewLoanHistory(LoanService loanService, Customer loggedInCustomer) {
+        System.out.println("Loan history:");
+        loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId()).forEach(System.out::println);
+        System.out.println("Failed loan logs:");
+        loanService.getFailedLoanLogs().forEach(System.out::println);
+    }
+
+    private static Account selectCustomerAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
+        List<Account> accounts = accountService.getAccountsForCustomer(loggedInCustomer.getCustomerId());
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts found for this customer.");
+            return null;
+        }
+
+        System.out.println("Available accounts:");
+        accounts.forEach(System.out::println);
+        String accountId = readText(scanner, "Account ID: ");
+
+        for (Account account : accounts) {
+            if (account.getAccountId().equals(accountId)) {
+                return account;
+            }
+        }
+
+        System.out.println("Account not found.");
+        return null;
     }
 
     private static void processAndReport(TransactionService transactionService,

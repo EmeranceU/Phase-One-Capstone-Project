@@ -99,6 +99,8 @@ public class FileHandler {
         BigDecimal amount = transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount();
         return transaction.getTimestamp() + " | "
                 + transaction.getTransactionId() + " | "
+                + transaction.getCustomerId() + " | "
+                + transaction.getAccountId() + " | "
                 + transaction.getReferenceId() + " | "
                 + transaction.getTransactionType() + " | "
                 + amount;

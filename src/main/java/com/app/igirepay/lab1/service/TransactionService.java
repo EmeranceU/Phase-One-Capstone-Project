@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TransactionService {
 
@@ -39,10 +40,7 @@ public class TransactionService {
             account.deposit(transaction.getAmount());
             recordSuccess(transaction);
             return transaction;
-        } catch (DuplicateTransactionException exception) {
-            recordFailure(transaction, exception.getMessage());
-            throw exception;
-        } catch (InvalidAmountException exception) {
+        } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
             throw exception;
         } catch (IllegalArgumentException exception) {
@@ -66,10 +64,7 @@ public class TransactionService {
 
             recordSuccess(transaction);
             return transaction;
-        } catch (DuplicateTransactionException exception) {
-            recordFailure(transaction, exception.getMessage());
-            throw exception;
-        } catch (InvalidAmountException exception) {
+        } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
             throw exception;
         } catch (IllegalArgumentException exception) {
@@ -98,10 +93,7 @@ public class TransactionService {
 
             recordSuccess(transaction);
             return transaction;
-        } catch (DuplicateTransactionException exception) {
-            recordFailure(transaction, exception.getMessage());
-            throw exception;
-        } catch (InvalidAmountException exception) {
+        } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
             throw exception;
         } catch (IllegalArgumentException exception) {
@@ -120,6 +112,16 @@ public class TransactionService {
 
     public List<String> getFailedTransactionLogs() {
         return Collections.unmodifiableList(failedTransactionLogs);
+    }
+
+    public List<Transaction> getTransactionHistoryForCustomer(String customerId) {
+        if (customerId == null) {
+            return List.of();
+        }
+
+        return transactionHistory.stream()
+                .filter(transaction -> customerId.equals(transaction.getCustomerId()))
+                .collect(Collectors.toList());
     }
 
     private void validateAccountAndTransaction(Account account, Transaction transaction) {

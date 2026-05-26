@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LoanService {
 
@@ -71,6 +72,16 @@ public class LoanService {
 		return Collections.unmodifiableList(loanHistory);
 	}
 
+	public List<Loan> getLoanHistoryForCustomer(String customerId) {
+		if (customerId == null) {
+			return List.of();
+		}
+
+		return loanHistory.stream()
+				.filter(loan -> customerId.equals(loan.getCustomerId()))
+				.collect(Collectors.toList());
+	}
+
 	public List<String> getFailedLoanLogs() {
 		return Collections.unmodifiableList(failedLoanLogs);
 	}
@@ -128,7 +139,7 @@ public class LoanService {
 			return BigDecimal.ZERO;
 		}
 
-		int successfulTransactionCount = transactionService.getTransactionHistory().size();
+		int successfulTransactionCount = transactionService.getTransactionHistoryForCustomer(customerId).size();
 		return WALLET_ACTIVITY_UNIT.multiply(BigDecimal.valueOf(successfulTransactionCount));
 	}
 }
