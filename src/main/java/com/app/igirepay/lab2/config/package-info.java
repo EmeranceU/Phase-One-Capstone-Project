@@ -1,1 +1,0 @@
-package com.app.igirepay.lab2.config;
