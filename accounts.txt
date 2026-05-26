@@ -1,6 +1,5 @@
-WAL-1 | 1 | WalletAccount | 5000
-SAV-1 | 1 | SavingsAccount | 10000
+
 WAL-1 | 1 | WalletAccount | 10000
-WAL-2 | 1 | WalletAccount | 100000
-WAL-3 | 1 | WalletAccount | 100000
-WAL-1 | 1 | WalletAccount | 10000
+WAL-2 | 1 | WalletAccount | 20000
+SAV-1 | 1 | SavingsAccount | 40000
+WAL-3 | 2 | WalletAccount | 2000

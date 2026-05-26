@@ -158,6 +158,15 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    // Load a transaction from file into memory without writing back to disk
+    public void loadTransaction(Transaction transaction) {
+        if (transaction == null) return;
+        if (transaction.getReferenceId() != null && !transaction.getReferenceId().isBlank()) {
+            processedReferenceIds.add(transaction.getReferenceId());
+        }
+        transactionHistory.add(transaction);
+    }
+
     private void validateAccountAndTransaction(Account account, Transaction transaction) {
         if (account == null) {
             throw new IllegalArgumentException("account must not be null");

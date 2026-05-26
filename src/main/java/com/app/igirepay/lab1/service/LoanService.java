@@ -3,7 +3,6 @@ package com.app.igirepay.lab1.service;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.model.Loan;
 import com.app.igirepay.lab1.model.SavingsAccount;
-import com.app.igirepay.lab1.model.WalletAccount;
 import com.app.igirepay.lab1.util.FileHandler;
 
 import java.math.BigDecimal;
@@ -16,9 +15,11 @@ import java.util.stream.Collectors;
 
 public class LoanService {
 
+	private static final BigDecimal MINIMUM_SAVINGS_BALANCE = new BigDecimal("100.00");
+	private static final int MINIMUM_SUCCESSFUL_TRANSACTIONS = 5;
 	private static final BigDecimal SAVINGS_LIMIT_RATE = new BigDecimal("0.30");
 	private static final BigDecimal DEFAULT_INTEREST_RATE = new BigDecimal("5.00");
-	private static final BigDecimal WALLET_ACTIVITY_UNIT = new BigDecimal("100.00");
+	private static final BigDecimal TRANSACTION_ACTIVITY_UNIT = new BigDecimal("100.00");
 
 	private final AccountService accountService;
 	private final TransactionService transactionService;
@@ -44,15 +45,19 @@ public class LoanService {
 			return loan;
 		}
 
+		BigDecimal savingsBalance = calculateHighestSavingsBalance(customer.getCustomerId());
+		int successfulTransactionCount = calculateSuccessfulTransactionCount(customer.getCustomerId());
+		boolean hasMinimumSavings = savingsBalance.compareTo(MINIMUM_SAVINGS_BALANCE) >= 0;
+		boolean hasMinimumTransactions = successfulTransactionCount >= MINIMUM_SUCCESSFUL_TRANSACTIONS;
 		BigDecimal savingsLimit = calculateSavingsLimit(customer.getCustomerId());
-		BigDecimal walletLimit = calculateWalletLimit(customer.getCustomerId());
-		BigDecimal loanLimit = savingsLimit.max(walletLimit);
-		if (amount.compareTo(loanLimit) <= 0 && loanLimit.compareTo(BigDecimal.ZERO) > 0) {
+		BigDecimal transactionLimit = calculateTransactionLimit(customer.getCustomerId());
+		BigDecimal loanLimit = savingsLimit.max(transactionLimit);
+		if (hasMinimumSavings && hasMinimumTransactions && amount.compareTo(loanLimit) <= 0 && loanLimit.compareTo(BigDecimal.ZERO) > 0) {
 			approveLoan(loan);
 			return loan;
 		}
 
-		rejectLoan(loan, buildRejectionReason(savingsLimit, walletLimit, amount, loanLimit));
+		rejectLoan(loan, buildRejectionReason(hasMinimumSavings, hasMinimumTransactions, amount, loanLimit));
 		return loan;
 	}
 
@@ -62,12 +67,18 @@ public class LoanService {
 		}
 
 		BigDecimal savingsLimit = calculateSavingsLimit(customer.getCustomerId());
-		BigDecimal walletLimit = calculateWalletLimit(customer.getCustomerId());
-		return savingsLimit.max(walletLimit);
+		BigDecimal transactionLimit = calculateTransactionLimit(customer.getCustomerId());
+		return savingsLimit.max(transactionLimit);
 	}
 
 	public boolean evaluateLoanEligibility(Customer customer) {
-		return calculateLoanLimit(customer).compareTo(BigDecimal.ZERO) > 0;
+		if (customer == null) {
+			return false;
+		}
+
+		String customerId = customer.getCustomerId();
+		return calculateHighestSavingsBalance(customerId).compareTo(MINIMUM_SAVINGS_BALANCE) >= 0
+				&& calculateSuccessfulTransactionCount(customerId) >= MINIMUM_SUCCESSFUL_TRANSACTIONS;
 	}
 
 	public List<Loan> getLoanHistory() {
@@ -86,6 +97,16 @@ public class LoanService {
 
 	public List<String> getFailedLoanLogs() {
 		return Collections.unmodifiableList(failedLoanLogs);
+	}
+
+	// Load a loan from file into memory without persisting
+	public void loadLoan(Loan loan) {
+		if (loan == null) return;
+		loanHistory.add(loan);
+		if (!loan.isApproved()) {
+			String logEntry = loan.getLoanId() + " - " + loan.getRepaymentStatus();
+			failedLoanLogs.add(logEntry);
+		}
 	}
 
 	private Loan createLoan(Customer customer, BigDecimal amount) {
@@ -115,17 +136,20 @@ public class LoanService {
 		fileHandler.saveLoan(loan);
 	}
 
-	private String buildRejectionReason(BigDecimal savingsLimit, BigDecimal walletLimit, BigDecimal amount, BigDecimal loanLimit) {
-		if (savingsLimit.compareTo(BigDecimal.ZERO) <= 0 && walletLimit.compareTo(BigDecimal.ZERO) <= 0) {
-			return "REJECTED: insufficient savings balance and not enough transaction activity";
+	private String buildRejectionReason(boolean hasMinimumSavings,
+	                                  boolean hasMinimumTransactions,
+	                                  BigDecimal amount,
+	                                  BigDecimal loanLimit) {
+		if (!hasMinimumSavings && !hasMinimumTransactions) {
+			return "REJECTED: insufficient savings balance and not enough transaction history";
 		}
 
-		if (savingsLimit.compareTo(BigDecimal.ZERO) <= 0) {
+		if (!hasMinimumSavings) {
 			return "REJECTED: insufficient savings balance";
 		}
 
-		if (walletLimit.compareTo(BigDecimal.ZERO) <= 0) {
-			return "REJECTED: not enough transaction activity";
+		if (!hasMinimumTransactions) {
+			return "REJECTED: not enough successful transactions (minimum 5 required)";
 		}
 
 		if (amount.compareTo(loanLimit) > 0) {
@@ -133,6 +157,19 @@ public class LoanService {
 		}
 
 		return "REJECTED: loan request not eligible";
+	}
+
+	private BigDecimal calculateHighestSavingsBalance(String customerId) {
+		if (customerId == null) {
+			return BigDecimal.ZERO;
+		}
+
+		return accountService.getAccountsForCustomer(customerId).stream()
+				.filter(SavingsAccount.class::isInstance)
+				.map(SavingsAccount.class::cast)
+				.map(SavingsAccount::getBalance)
+				.max(BigDecimal::compareTo)
+				.orElse(BigDecimal.ZERO);
 	}
 
 	private BigDecimal calculateSavingsLimit(String customerId) {
@@ -150,18 +187,16 @@ public class LoanService {
 				.orElse(BigDecimal.ZERO);
 	}
 
-	private BigDecimal calculateWalletLimit(String customerId) {
+	private int calculateSuccessfulTransactionCount(String customerId) {
 		if (customerId == null) {
-			return BigDecimal.ZERO;
+			return 0;
 		}
 
-		boolean hasWalletAccount = accountService.getAccountsForCustomer(customerId).stream()
-				.anyMatch(WalletAccount.class::isInstance);
-		if (!hasWalletAccount) {
-			return BigDecimal.ZERO;
-		}
+		return transactionService.getTransactionHistoryForCustomer(customerId).size();
+	}
 
-		int successfulTransactionCount = transactionService.getTransactionHistoryForCustomer(customerId).size();
-		return WALLET_ACTIVITY_UNIT.multiply(BigDecimal.valueOf(successfulTransactionCount));
+	private BigDecimal calculateTransactionLimit(String customerId) {
+		int successfulTransactionCount = calculateSuccessfulTransactionCount(customerId);
+		return TRANSACTION_ACTIVITY_UNIT.multiply(BigDecimal.valueOf(successfulTransactionCount));
 	}
 }

@@ -34,6 +34,16 @@ public class AccountService {
         return true;
     }
 
+    // Add customer during startup load without persisting back to file
+    public boolean addCustomerFromFile(Customer customer) {
+        if (customer == null || customer.getCustomerId() == null || customers.containsKey(customer.getCustomerId())) {
+            return false;
+        }
+
+        customers.put(customer.getCustomerId(), customer);
+        return true;
+    }
+
     public Customer findCustomerById(String customerId) {
         if (customerId == null) {
             return null;
@@ -49,6 +59,20 @@ public class AccountService {
 
         accounts.put(account.getAccountId(), account);
         fileHandler.saveAccount(account);
+        return true;
+    }
+
+    // Add account during startup load without persisting back to file; attach to customer if present
+    public boolean addAccountFromFile(Account account) {
+        if (account == null || account.getAccountId() == null || accounts.containsKey(account.getAccountId())) {
+            return false;
+        }
+
+        accounts.put(account.getAccountId(), account);
+        Customer owner = customers.get(account.getCustomerId());
+        if (owner != null) {
+            owner.addAccount(account);
+        }
         return true;
     }
 
