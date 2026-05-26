@@ -40,17 +40,19 @@ public class LoanService {
 	public Loan requestLoan(Customer customer, BigDecimal amount) {
 		Loan loan = createLoan(customer, amount);
 		if (customer == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-			rejectLoan(loan, "Invalid loan amount.");
+			rejectLoan(loan, "REJECTED: invalid loan amount");
 			return loan;
 		}
 
-		BigDecimal loanLimit = calculateLoanLimit(customer);
+		BigDecimal savingsLimit = calculateSavingsLimit(customer.getCustomerId());
+		BigDecimal walletLimit = calculateWalletLimit(customer.getCustomerId());
+		BigDecimal loanLimit = savingsLimit.max(walletLimit);
 		if (amount.compareTo(loanLimit) <= 0 && loanLimit.compareTo(BigDecimal.ZERO) > 0) {
 			approveLoan(loan);
 			return loan;
 		}
 
-		rejectLoan(loan, "Loan amount exceeds eligible limit.");
+		rejectLoan(loan, buildRejectionReason(savingsLimit, walletLimit, amount, loanLimit));
 		return loan;
 	}
 
@@ -105,12 +107,32 @@ public class LoanService {
 
 	private void rejectLoan(Loan loan, String reason) {
 		loan.setApproved(false);
-		loan.setRepaymentStatus("REJECTED");
+		loan.setRepaymentStatus(reason);
 		loanHistory.add(loan);
 		String logEntry = loan.getLoanId() + " - " + reason;
 		failedLoanLogs.add(logEntry);
 		fileHandler.saveFailedLoan(logEntry);
 		fileHandler.saveLoan(loan);
+	}
+
+	private String buildRejectionReason(BigDecimal savingsLimit, BigDecimal walletLimit, BigDecimal amount, BigDecimal loanLimit) {
+		if (savingsLimit.compareTo(BigDecimal.ZERO) <= 0 && walletLimit.compareTo(BigDecimal.ZERO) <= 0) {
+			return "REJECTED: insufficient savings balance and not enough transaction activity";
+		}
+
+		if (savingsLimit.compareTo(BigDecimal.ZERO) <= 0) {
+			return "REJECTED: insufficient savings balance";
+		}
+
+		if (walletLimit.compareTo(BigDecimal.ZERO) <= 0) {
+			return "REJECTED: not enough transaction activity";
+		}
+
+		if (amount.compareTo(loanLimit) > 0) {
+			return "REJECTED: loan amount exceeds eligibility limit";
+		}
+
+		return "REJECTED: loan request not eligible";
 	}
 
 	private BigDecimal calculateSavingsLimit(String customerId) {

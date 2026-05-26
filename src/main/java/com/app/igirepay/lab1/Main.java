@@ -85,20 +85,23 @@ public class Main {
                 withdrawMoney(scanner, accountService, transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 5:
-                viewMyAccounts(loggedInCustomer);
+                checkAccountBalance(loggedInCustomer);
                 return loggedInCustomer;
             case 6:
-                viewTransactionHistory(transactionService, loggedInCustomer);
+                viewMyAccounts(loggedInCustomer);
                 return loggedInCustomer;
             case 7:
-                requestLoan(scanner, loanService, loggedInCustomer);
+                viewTransactionHistory(transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 8:
-                viewLoanHistory(loanService, loggedInCustomer);
+                requestLoan(scanner, loanService, loggedInCustomer);
                 return loggedInCustomer;
             case 9:
-                return changePin(scanner, authService, loggedInCustomer);
+                viewLoanHistory(loanService, loggedInCustomer);
+                return loggedInCustomer;
             case 10:
+                return changePin(scanner, authService, loggedInCustomer);
+            case 11:
                 System.out.println("Logged out.");
                 return null;
             default:
@@ -123,12 +126,13 @@ public class Main {
         System.out.println("2. Create Savings Account");
         System.out.println("3. Deposit Money");
         System.out.println("4. Withdraw Money");
-        System.out.println("5. View My Accounts");
-        System.out.println("6. View Transaction History");
-        System.out.println("7. Request Loan");
-        System.out.println("8. View Loan History");
-        System.out.println("9. Change PIN");
-        System.out.println("10. Logout");
+        System.out.println("5. Check Balance");
+        System.out.println("6. View My Accounts");
+        System.out.println("7. View Transaction History");
+        System.out.println("8. Request Loan");
+        System.out.println("9. View Loan History");
+        System.out.println("10. Change PIN");
+        System.out.println("11. Logout");
         System.out.print("Choose an option: ");
     }
 
@@ -155,7 +159,7 @@ public class Main {
             System.out.println("Login successful for: " + customer.getFullName());
             return customer;
         } catch (InvalidPinException exception) {
-            System.out.println(exception.getMessage());
+            System.out.println("Login failed: " + exception.getMessage());
             return null;
         }
     }
@@ -170,7 +174,7 @@ public class Main {
             System.out.println("PIN changed successfully.");
             return authService.login(phoneNumber, newPin);
         } catch (InvalidPinException exception) {
-            System.out.println(exception.getMessage());
+            System.out.println("PIN change failed: " + exception.getMessage());
             return loggedInCustomer;
         }
     }
@@ -244,28 +248,57 @@ public class Main {
     }
 
     private static void viewMyAccounts(Customer loggedInCustomer) {
+        if (loggedInCustomer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found. Please create an account first.");
+            return;
+        }
+
         System.out.println(loggedInCustomer);
         loggedInCustomer.getAccounts().forEach(System.out::println);
     }
 
+    private static void checkAccountBalance(Customer loggedInCustomer) {
+        if (loggedInCustomer.getAccounts().isEmpty()) {
+            System.out.println("No accounts found. Please create an account first.");
+            return;
+        }
+
+        System.out.println("Account balances:");
+        loggedInCustomer.getAccounts().forEach(account ->
+                System.out.println(account.getClass().getSimpleName() + " | "
+                        + account.getAccountId() + " | Balance: " + account.getBalance()));
+    }
+
     private static void viewTransactionHistory(TransactionService transactionService, Customer loggedInCustomer) {
+        List<Transaction> transactions = transactionService.getTransactionHistoryForCustomer(loggedInCustomer.getCustomerId());
+        if (transactions.isEmpty()) {
+            System.out.println("No transaction history available.");
+            return;
+        }
+
         System.out.println("Transaction history:");
-        transactionService.getTransactionHistoryForCustomer(loggedInCustomer.getCustomerId()).forEach(System.out::println);
-        System.out.println("Failed transaction logs:");
-        transactionService.getFailedTransactionLogs().forEach(System.out::println);
+        transactions.forEach(System.out::println);
     }
 
     private static void requestLoan(Scanner scanner, LoanService loanService, Customer loggedInCustomer) {
         BigDecimal amount = readAmount(scanner, "Loan amount: ");
         Loan loan = loanService.requestLoan(loggedInCustomer, amount);
-        System.out.println(loan.isApproved() ? "Loan approved: " + loan : "Loan rejected: " + loan);
+        if (loan.isApproved()) {
+            System.out.println("Loan approved: " + loan);
+        } else {
+            System.out.println(loan.getRepaymentStatus());
+        }
     }
 
     private static void viewLoanHistory(LoanService loanService, Customer loggedInCustomer) {
+        List<Loan> loans = loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId());
+        if (loans.isEmpty()) {
+            System.out.println("No loan history available.");
+            return;
+        }
+
         System.out.println("Loan history:");
-        loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId()).forEach(System.out::println);
-        System.out.println("Failed loan logs:");
-        loanService.getFailedLoanLogs().forEach(System.out::println);
+        loans.forEach(System.out::println);
     }
 
     private static Account selectCustomerAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
@@ -295,7 +328,7 @@ public class Main {
                                          String label) {
         try {
             transactionService.processTransaction(account, transaction);
-            System.out.println(label + " completed: " + transaction.getReferenceId());
+            System.out.println(label + " successful: " + account.getAccountId() + " | Balance: " + account.getBalance());
         } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
             System.out.println(label + " failed: " + exception.getMessage());
         }
