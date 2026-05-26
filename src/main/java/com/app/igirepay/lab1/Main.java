@@ -28,10 +28,16 @@ public class Main {
     private static int nextTransactionId = 1;
 
     public static void main(String[] args) {
-        AccountService accountService = new AccountService();
-        TransactionService transactionService = new TransactionService();
+        // use a shared FileHandler so reads/writes target the same files
+        com.app.igirepay.lab1.util.FileHandler fileHandler = new com.app.igirepay.lab1.util.FileHandler();
+        AccountService accountService = new AccountService(fileHandler);
+        TransactionService transactionService = new TransactionService(fileHandler);
         AuthService authService = new AuthService(accountService);
-        LoanService loanService = new LoanService(accountService, transactionService);
+        LoanService loanService = new LoanService(accountService, transactionService, fileHandler);
+
+        // Load persisted data into memory before showing menus
+        fileHandler.loadAllData(accountService, transactionService, loanService);
+        syncNextIds(accountService, transactionService);
         Customer loggedInCustomer = null;
 
         try (Scanner scanner = new Scanner(System.in)) {
@@ -115,7 +121,7 @@ public class Main {
 
     private static void printStartMenu() {
         System.out.println();
-        System.out.println("=== IgirePay Lab 1 ===");
+        System.out.println("=== IgirePay Ltd ===");
         System.out.println("1. Register Customer");
         System.out.println("2. Login");
         System.out.println("3. Exit");
@@ -130,7 +136,7 @@ public class Main {
         System.out.println("3. Deposit Money");
         System.out.println("4. Withdraw Money");
         System.out.println("5. Transfer Money");
-        System.out.println("6. Check Account Balance");
+        System.out.println("6. Check Balance");
         System.out.println("7. View My Accounts");
         System.out.println("8. View Transaction History");
         System.out.println("9. Request Loan");
@@ -138,6 +144,51 @@ public class Main {
         System.out.println("11. Change PIN");
         System.out.println("12. Logout");
         System.out.print("Choose an option: ");
+    }
+
+    private static void syncNextIds(AccountService accountService, TransactionService transactionService) {
+        nextCustomerId = accountService.getCustomers().stream()
+                .map(Customer::getCustomerId)
+                .mapToInt(Main::extractNumericId)
+                .max()
+                .orElse(0) + 1;
+
+        nextWalletId = accountService.getAccounts().stream()
+                .filter(account -> account instanceof WalletAccount)
+                .map(Account::getAccountId)
+                .mapToInt(Main::extractNumericId)
+                .max()
+                .orElse(0) + 1;
+
+        nextSavingsId = accountService.getAccounts().stream()
+                .filter(account -> account instanceof SavingsAccount)
+                .map(Account::getAccountId)
+                .mapToInt(Main::extractNumericId)
+                .max()
+                .orElse(0) + 1;
+
+        nextTransactionId = transactionService.getTransactionHistory().stream()
+                .map(Transaction::getTransactionId)
+                .mapToInt(Main::extractNumericId)
+                .max()
+                .orElse(0) + 1;
+    }
+
+    private static int extractNumericId(String value) {
+        if (value == null) {
+            return 0;
+        }
+
+        String digits = value.replaceAll("\\D+", "");
+        if (digits.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException exception) {
+            return 0;
+        }
     }
 
     private static void registerCustomer(Scanner scanner, AccountService accountService) {
