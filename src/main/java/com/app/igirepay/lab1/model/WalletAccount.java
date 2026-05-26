@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 
 public class WalletAccount extends Account {
 
-	public WalletAccount(String accountId, String customerId, BigDecimal balance, String pin) {
-		super(accountId, customerId, balance, pin);
+	public WalletAccount(String accountId, String customerId, BigDecimal balance) {
+		super(accountId, customerId, balance);
 	}
 
 	@Override

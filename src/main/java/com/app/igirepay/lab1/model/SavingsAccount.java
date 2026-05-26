@@ -7,13 +7,13 @@ public class SavingsAccount extends Account {
 	private static final BigDecimal WITHDRAWAL_FEE = new BigDecimal("2.00");
 	private BigDecimal minimumBalance;
 
-	public SavingsAccount(String accountId, String customerId, BigDecimal balance, String pin) {
-		super(accountId, customerId, balance, pin);
+	public SavingsAccount(String accountId, String customerId, BigDecimal balance) {
+		super(accountId, customerId, balance);
 		this.minimumBalance = new BigDecimal("100.00");
 	}
 
-	public SavingsAccount(String accountId, String customerId, BigDecimal balance, String pin, BigDecimal minimumBalance) {
-		super(accountId, customerId, balance, pin);
+	public SavingsAccount(String accountId, String customerId, BigDecimal balance, BigDecimal minimumBalance) {
+		super(accountId, customerId, balance);
 		this.minimumBalance = minimumBalance == null ? new BigDecimal("100.00") : minimumBalance;
 	}
 

@@ -4,6 +4,7 @@ import com.app.igirepay.lab1.exception.DuplicateTransactionException;
 import com.app.igirepay.lab1.exception.InsufficientBalanceException;
 import com.app.igirepay.lab1.exception.InvalidAmountException;
 import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.model.Transaction;
 import com.app.igirepay.lab1.util.FileHandler;
 
@@ -73,6 +74,39 @@ public class TransactionService {
         }
     }
 
+    public Transaction processTransfer(AccountService accountService, Customer loggedInCustomer, Transaction transaction)
+            throws DuplicateTransactionException, InvalidAmountException, InsufficientBalanceException {
+        try {
+            validateTransferContext(accountService, loggedInCustomer, transaction);
+            validateReferenceId(transaction.getReferenceId());
+            validateAmount(transaction.getAmount());
+
+            Account sourceAccount = accountService.findAccountById(transaction.getAccountId());
+            Account destinationAccount = accountService.findAccountById(transaction.getDestinationAccountId());
+
+            validateTransferAccounts(loggedInCustomer, sourceAccount, destinationAccount);
+            if (sourceAccount.getAccountId().equals(destinationAccount.getAccountId())) {
+                throw new IllegalArgumentException("Source and destination accounts must be different.");
+            }
+
+            boolean withdrawn = sourceAccount.withdraw(transaction.getAmount());
+            if (!withdrawn) {
+                recordFailure(transaction, "Insufficient balance for transfer.");
+                throw new InsufficientBalanceException("Insufficient balance for transfer.");
+            }
+
+            destinationAccount.deposit(transaction.getAmount());
+            recordSuccess(transaction);
+            return transaction;
+        } catch (DuplicateTransactionException | InvalidAmountException exception) {
+            recordFailure(transaction, exception.getMessage());
+            throw exception;
+        } catch (IllegalArgumentException exception) {
+            recordFailure(transaction, exception.getMessage());
+            throw new InvalidAmountException(exception.getMessage());
+        }
+    }
+
     public Transaction processTransaction(Account account, Transaction transaction)
             throws DuplicateTransactionException, InvalidAmountException, InsufficientBalanceException {
         try {
@@ -131,6 +165,42 @@ public class TransactionService {
 
         if (transaction == null) {
             throw new IllegalArgumentException("transaction must not be null");
+        }
+    }
+
+    private void validateTransferContext(AccountService accountService, Customer loggedInCustomer, Transaction transaction) {
+        if (accountService == null) {
+            throw new IllegalArgumentException("accountService must not be null");
+        }
+
+        if (loggedInCustomer == null) {
+            throw new IllegalArgumentException("loggedInCustomer must not be null");
+        }
+
+        if (transaction == null) {
+            throw new IllegalArgumentException("transaction must not be null");
+        }
+
+        if (transaction.getAccountId() == null || transaction.getAccountId().trim().isEmpty()) {
+            throw new IllegalArgumentException("source account must not be blank");
+        }
+
+        if (transaction.getDestinationAccountId() == null || transaction.getDestinationAccountId().trim().isEmpty()) {
+            throw new IllegalArgumentException("destination account must not be blank");
+        }
+    }
+
+    private void validateTransferAccounts(Customer loggedInCustomer, Account sourceAccount, Account destinationAccount) {
+        if (sourceAccount == null) {
+            throw new IllegalArgumentException("source account must exist");
+        }
+
+        if (destinationAccount == null) {
+            throw new IllegalArgumentException("destination account must exist");
+        }
+
+        if (loggedInCustomer.getCustomerId() == null || !loggedInCustomer.getCustomerId().equals(sourceAccount.getCustomerId())) {
+            throw new IllegalArgumentException("Source account must belong to the logged-in customer.");
         }
     }
 

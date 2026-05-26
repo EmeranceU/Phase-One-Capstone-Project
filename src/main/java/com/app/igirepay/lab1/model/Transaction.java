@@ -8,15 +8,17 @@ public class Transaction {
 	private String transactionId;
 	private String customerId;
 	private String accountId;
+	private String destinationAccountId;
 	private String referenceId;
 	private BigDecimal amount;
 	private String transactionType;
 	private LocalDateTime timestamp;
 
-	public Transaction(String transactionId, String customerId, String accountId, String referenceId, BigDecimal amount, String transactionType, LocalDateTime timestamp) {
+	public Transaction(String transactionId, String customerId, String accountId, String destinationAccountId, String referenceId, BigDecimal amount, String transactionType, LocalDateTime timestamp) {
 		this.transactionId = transactionId;
 		this.customerId = customerId;
 		this.accountId = accountId;
+		this.destinationAccountId = destinationAccountId;
 		this.referenceId = referenceId;
 		this.amount = amount;
 		this.transactionType = transactionType;
@@ -45,6 +47,14 @@ public class Transaction {
 
 	public void setAccountId(String accountId) {
 		this.accountId = accountId;
+	}
+
+	public String getDestinationAccountId() {
+		return destinationAccountId;
+	}
+
+	public void setDestinationAccountId(String destinationAccountId) {
+		this.destinationAccountId = destinationAccountId;
 	}
 
 	public String getReferenceId() {
@@ -85,6 +95,7 @@ public class Transaction {
 				"transactionId='" + transactionId + '\'' +
 				", customerId='" + customerId + '\'' +
 				", accountId='" + accountId + '\'' +
+				", destinationAccountId='" + destinationAccountId + '\'' +
 				", referenceId='" + referenceId + '\'' +
 				", amount=" + amount +
 				", transactionType='" + transactionType + '\'' +

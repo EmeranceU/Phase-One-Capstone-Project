@@ -85,23 +85,26 @@ public class Main {
                 withdrawMoney(scanner, accountService, transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 5:
-                checkAccountBalance(loggedInCustomer);
+                transferMoney(scanner, accountService, transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 6:
-                viewMyAccounts(loggedInCustomer);
+                checkAccountBalance(loggedInCustomer);
                 return loggedInCustomer;
             case 7:
-                viewTransactionHistory(transactionService, loggedInCustomer);
+                viewMyAccounts(loggedInCustomer);
                 return loggedInCustomer;
             case 8:
-                requestLoan(scanner, loanService, loggedInCustomer);
+                viewTransactionHistory(transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 9:
-                viewLoanHistory(loanService, loggedInCustomer);
+                requestLoan(scanner, loanService, loggedInCustomer);
                 return loggedInCustomer;
             case 10:
-                return changePin(scanner, authService, loggedInCustomer);
+                viewLoanHistory(loanService, loggedInCustomer);
+                return loggedInCustomer;
             case 11:
+                return changePin(scanner, authService, loggedInCustomer);
+            case 12:
                 System.out.println("Logged out.");
                 return null;
             default:
@@ -126,13 +129,14 @@ public class Main {
         System.out.println("2. Create Savings Account");
         System.out.println("3. Deposit Money");
         System.out.println("4. Withdraw Money");
-        System.out.println("5. Check Balance");
-        System.out.println("6. View My Accounts");
-        System.out.println("7. View Transaction History");
-        System.out.println("8. Request Loan");
-        System.out.println("9. View Loan History");
-        System.out.println("10. Change PIN");
-        System.out.println("11. Logout");
+        System.out.println("5. Transfer Money");
+        System.out.println("6. Check Account Balance");
+        System.out.println("7. View My Accounts");
+        System.out.println("8. View Transaction History");
+        System.out.println("9. Request Loan");
+        System.out.println("10. View Loan History");
+        System.out.println("11. Change PIN");
+        System.out.println("12. Logout");
         System.out.print("Choose an option: ");
     }
 
@@ -181,8 +185,7 @@ public class Main {
 
     private static void createWalletAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
         BigDecimal balance = readAmount(scanner, "Initial balance: ");
-        String pin = readText(scanner, "PIN: ");
-        WalletAccount account = new WalletAccount("WAL-" + nextWalletId++, loggedInCustomer.getCustomerId(), balance, pin);
+        WalletAccount account = new WalletAccount("WAL-" + nextWalletId++, loggedInCustomer.getCustomerId(), balance);
 
         if (accountService.addAccountToCustomer(loggedInCustomer.getCustomerId(), account)) {
             System.out.println("Wallet account created: " + account.getAccountId());
@@ -193,8 +196,7 @@ public class Main {
 
     private static void createSavingsAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
         BigDecimal balance = readAmount(scanner, "Initial balance: ");
-        String pin = readText(scanner, "PIN: ");
-        SavingsAccount account = new SavingsAccount("SAV-" + nextSavingsId++, loggedInCustomer.getCustomerId(), balance, pin);
+        SavingsAccount account = new SavingsAccount("SAV-" + nextSavingsId++, loggedInCustomer.getCustomerId(), balance);
 
         if (accountService.addAccountToCustomer(loggedInCustomer.getCustomerId(), account)) {
             System.out.println("Savings account created: " + account.getAccountId());
@@ -217,6 +219,7 @@ public class Main {
         Transaction transaction = new Transaction(String.valueOf(nextTransactionId++),
                 loggedInCustomer.getCustomerId(),
                 account.getAccountId(),
+            null,
                 referenceId,
                 amount,
                 "DEPOSIT",
@@ -239,6 +242,7 @@ public class Main {
         Transaction transaction = new Transaction(String.valueOf(nextTransactionId++),
                 loggedInCustomer.getCustomerId(),
                 account.getAccountId(),
+            null,
                 referenceId,
                 amount,
                 "WITHDRAWAL",
@@ -247,14 +251,44 @@ public class Main {
         processAndReport(transactionService, account, transaction, "Withdrawal");
     }
 
+    private static void transferMoney(Scanner scanner,
+                                      AccountService accountService,
+                                      TransactionService transactionService,
+                                      Customer loggedInCustomer) {
+        Account sourceAccount = selectCustomerAccount(scanner, accountService, loggedInCustomer);
+        if (sourceAccount == null) {
+            return;
+        }
+
+        BigDecimal amount = readAmount(scanner, "Transfer amount: ");
+        String destinationAccountId = readText(scanner, "Destination Account ID: ");
+        String referenceId = readText(scanner, "Reference ID: ");
+        Transaction transaction = new Transaction(String.valueOf(nextTransactionId++),
+                loggedInCustomer.getCustomerId(),
+                sourceAccount.getAccountId(),
+                destinationAccountId,
+                referenceId,
+                amount,
+                "TRANSFER",
+                LocalDateTime.now());
+
+        try {
+            transactionService.processTransfer(accountService, loggedInCustomer, transaction);
+            Account destinationAccount = accountService.findAccountById(destinationAccountId);
+            System.out.println("Transfer successful: " + sourceAccount.getAccountId() + " -> " + destinationAccountId + " | Source balance: " + sourceAccount.getBalance() + " | Destination balance: " + destinationAccount.getBalance());
+        } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
+            System.out.println("Transfer failed: " + exception.getMessage());
+        }
+    }
+
     private static void viewMyAccounts(Customer loggedInCustomer) {
         if (loggedInCustomer.getAccounts().isEmpty()) {
             System.out.println("No accounts found. Please create an account first.");
             return;
         }
 
-        System.out.println(loggedInCustomer);
-        loggedInCustomer.getAccounts().forEach(System.out::println);
+        loggedInCustomer.getAccounts().forEach(account ->
+                System.out.println(account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + account.getBalance()));
     }
 
     private static void checkAccountBalance(Customer loggedInCustomer) {

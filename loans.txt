@@ -1,0 +1,2 @@
+2026-05-26T15:18:45.951431800 | 1 | 1 | 10000 | 5.00 | false | REJECTED
+2026-05-26T16:00:50.975980500 | 1 | 1 | 1000 | 5.00 | false | REJECTED: insufficient savings balance

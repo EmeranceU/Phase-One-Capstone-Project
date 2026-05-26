@@ -1,0 +1,2 @@
+1 - Loan amount exceeds eligible limit.
+1 - REJECTED: insufficient savings balance

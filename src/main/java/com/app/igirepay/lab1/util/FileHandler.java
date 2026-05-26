@@ -101,6 +101,7 @@ public class FileHandler {
                 + transaction.getTransactionId() + " | "
                 + transaction.getCustomerId() + " | "
                 + transaction.getAccountId() + " | "
+                + transaction.getDestinationAccountId() + " | "
                 + transaction.getReferenceId() + " | "
                 + transaction.getTransactionType() + " | "
                 + amount;

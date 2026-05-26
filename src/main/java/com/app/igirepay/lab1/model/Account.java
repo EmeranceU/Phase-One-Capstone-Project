@@ -3,18 +3,17 @@ package com.app.igirepay.lab1.model;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+
 public abstract class Account {
 
 	private String accountId;
 	private String customerId;
 	private BigDecimal balance;
-	private String pin;
 
-	protected Account(String accountId, String customerId, BigDecimal balance, String pin) {
+	protected Account(String accountId, String customerId, BigDecimal balance) {
 		this.accountId = accountId;
 		this.customerId = customerId;
 		this.balance = balance == null ? BigDecimal.ZERO : balance;
-		this.pin = pin;
 	}
 
 	public String getAccountId() {
@@ -39,14 +38,6 @@ public abstract class Account {
 
 	public void setBalance(BigDecimal balance) {
 		this.balance = balance == null ? BigDecimal.ZERO : balance;
-	}
-
-	public String getPin() {
-		return pin;
-	}
-
-	public void setPin(String pin) {
-		this.pin = pin;
 	}
 
 	public BigDecimal deposit(BigDecimal amount) {
