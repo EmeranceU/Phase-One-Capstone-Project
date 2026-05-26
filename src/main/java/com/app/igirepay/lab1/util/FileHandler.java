@@ -2,6 +2,7 @@ package com.app.igirepay.lab1.util;
 
 import com.app.igirepay.lab1.model.Account;
 import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab1.model.Loan;
 import com.app.igirepay.lab1.model.Transaction;
 
 import java.io.IOException;
@@ -19,6 +20,8 @@ public class FileHandler {
     private static final Path ACCOUNTS_FILE = Paths.get("accounts.txt");
     private static final Path TRANSACTION_HISTORY_FILE = Paths.get("transaction_history.txt");
     private static final Path FAILED_TRANSACTIONS_FILE = Paths.get("failed_transactions.txt");
+    private static final Path LOANS_FILE = Paths.get("loans.txt");
+    private static final Path FAILED_LOANS_FILE = Paths.get("failed_loans.txt");
 
     public void saveCustomer(Customer customer) {
         if (customer == null) {
@@ -52,6 +55,22 @@ public class FileHandler {
         writeLine(FAILED_TRANSACTIONS_FILE, logEntry);
     }
 
+    public void saveLoan(Loan loan) {
+        if (loan == null) {
+            return;
+        }
+
+        writeLine(LOANS_FILE, formatLoan(loan));
+    }
+
+    public void saveFailedLoan(String logEntry) {
+        if (logEntry == null || logEntry.trim().isEmpty()) {
+            return;
+        }
+
+        writeLine(FAILED_LOANS_FILE, logEntry);
+    }
+
     private void writeLine(Path filePath, String line) {
         try {
             Files.write(filePath, Collections.singletonList(line), StandardCharsets.UTF_8,
@@ -65,7 +84,8 @@ public class FileHandler {
         return customer.getCustomerId() + " | "
                 + customer.getFullName() + " | "
                 + customer.getEmail() + " | "
-                + customer.getPhoneNumber();
+                + customer.getPhoneNumber() + " | "
+                + customer.getPin();
     }
 
     private String formatAccount(Account account) {
@@ -82,5 +102,15 @@ public class FileHandler {
                 + transaction.getReferenceId() + " | "
                 + transaction.getTransactionType() + " | "
                 + amount;
+    }
+
+    private String formatLoan(Loan loan) {
+        return loan.getTimestamp() + " | "
+                + loan.getLoanId() + " | "
+                + loan.getCustomerId() + " | "
+                + loan.getAmount() + " | "
+                + loan.getInterestRate() + " | "
+                + loan.isApproved() + " | "
+                + loan.getRepaymentStatus();
     }
 }

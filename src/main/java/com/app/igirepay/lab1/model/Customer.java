@@ -9,13 +9,19 @@ public class Customer {
 	private String fullName;
 	private String email;
 	private String phoneNumber;
+	private String pin;
 	private final List<Account> accounts;
 
 	public Customer(String customerId, String fullName, String email, String phoneNumber) {
+		this(customerId, fullName, email, phoneNumber, null);
+	}
+
+	public Customer(String customerId, String fullName, String email, String phoneNumber, String pin) {
 		this.customerId = customerId;
 		this.fullName = fullName;
 		this.email = email;
 		this.phoneNumber = phoneNumber;
+		this.pin = pin;
 		this.accounts = new ArrayList<>();
 	}
 
@@ -49,6 +55,14 @@ public class Customer {
 
 	public void setPhoneNumber(String phoneNumber) {
 		this.phoneNumber = phoneNumber;
+	}
+
+	public String getPin() {
+		return pin;
+	}
+
+	public void setPin(String pin) {
+		this.pin = pin;
 	}
 
 	public List<Account> getAccounts() {
@@ -88,6 +102,7 @@ public class Customer {
 				", fullName='" + fullName + '\'' +
 				", email='" + email + '\'' +
 				", phoneNumber='" + phoneNumber + '\'' +
+				", pinSet=" + (pin != null && !pin.isBlank()) +
 				", accounts=" + accounts.size() +
 				'}';
 	}

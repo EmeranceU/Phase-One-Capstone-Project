@@ -3,17 +3,22 @@ package com.app.igirepay.lab1;
 import com.app.igirepay.lab1.exception.DuplicateTransactionException;
 import com.app.igirepay.lab1.exception.InsufficientBalanceException;
 import com.app.igirepay.lab1.exception.InvalidAmountException;
+import com.app.igirepay.lab1.exception.InvalidPinException;
 import com.app.igirepay.lab1.model.Account;
 import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab1.model.Loan;
 import com.app.igirepay.lab1.model.SavingsAccount;
 import com.app.igirepay.lab1.model.Transaction;
 import com.app.igirepay.lab1.model.WalletAccount;
 import com.app.igirepay.lab1.service.AccountService;
+import com.app.igirepay.lab1.service.AuthService;
+import com.app.igirepay.lab1.service.LoanService;
 import com.app.igirepay.lab1.service.TransactionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Scanner;
+
 public class Main {
 
     private static int nextCustomerId = 1;
@@ -24,7 +29,10 @@ public class Main {
     public static void main(String[] args) {
         AccountService accountService = new AccountService();
         TransactionService transactionService = new TransactionService();
+        AuthService authService = new AuthService(accountService);
+        LoanService loanService = new LoanService(accountService, transactionService);
         Scanner scanner = new Scanner(System.in);
+        Customer loggedInCustomer = null;
 
         while (true) {
             printMenu();
@@ -53,6 +61,18 @@ public class Main {
                     viewTransactionHistory(transactionService);
                     break;
                 case 8:
+                    loggedInCustomer = login(scanner, authService);
+                    break;
+                case 9:
+                    requestLoan(scanner, loanService, loggedInCustomer);
+                    break;
+                case 10:
+                    viewLoanHistory(loanService);
+                    break;
+                case 11:
+                    loggedInCustomer = changePin(scanner, authService, loggedInCustomer);
+                    break;
+                case 12:
                     System.out.println("Goodbye.");
                     scanner.close();
                     return;
@@ -73,7 +93,11 @@ public class Main {
         System.out.println("5. Withdraw Money");
         System.out.println("6. View Customer Accounts");
         System.out.println("7. View Transaction History");
-        System.out.println("8. Exit");
+        System.out.println("8. Login");
+        System.out.println("9. Request Loan");
+        System.out.println("10. View Loan History");
+        System.out.println("11. Change PIN");
+        System.out.println("12. Exit");
         System.out.print("Choose an option: ");
     }
 
@@ -81,8 +105,9 @@ public class Main {
         String fullName = readText(scanner, "Full name: ");
         String email = readText(scanner, "Email: ");
         String phoneNumber = readText(scanner, "Phone number: ");
+        String pin = readText(scanner, "PIN: ");
 
-        Customer customer = new Customer(String.valueOf(nextCustomerId++), fullName, email, phoneNumber);
+        Customer customer = new Customer(String.valueOf(nextCustomerId++), fullName, email, phoneNumber, pin);
         accountService.addCustomer(customer);
         System.out.println("Customer created with ID: " + customer.getCustomerId());
     }
@@ -162,6 +187,53 @@ public class Main {
         transactionService.getTransactionHistory().forEach(System.out::println);
         System.out.println("Failed transaction logs:");
         transactionService.getFailedTransactionLogs().forEach(System.out::println);
+    }
+
+    private static Customer login(Scanner scanner, AuthService authService) {
+        String phoneNumber = readText(scanner, "Phone number: ");
+        String pin = readText(scanner, "PIN: ");
+
+        try {
+            Customer customer = authService.login(phoneNumber, pin);
+            System.out.println("Login successful for: " + customer.getFullName());
+            return customer;
+        } catch (InvalidPinException exception) {
+            System.out.println(exception.getMessage());
+            return null;
+        }
+    }
+
+    private static void requestLoan(Scanner scanner, LoanService loanService, Customer loggedInCustomer) {
+        if (loggedInCustomer == null) {
+            System.out.println("Please login first.");
+            return;
+        }
+
+        BigDecimal amount = readAmount(scanner, "Loan amount: ");
+        Loan loan = loanService.requestLoan(loggedInCustomer, amount);
+        System.out.println(loan.isApproved() ? "Loan approved: " + loan : "Loan rejected: " + loan);
+    }
+
+    private static void viewLoanHistory(LoanService loanService) {
+        System.out.println("Loan history:");
+        loanService.getLoanHistory().forEach(System.out::println);
+        System.out.println("Failed loan logs:");
+        loanService.getFailedLoanLogs().forEach(System.out::println);
+    }
+
+    private static Customer changePin(Scanner scanner, AuthService authService, Customer loggedInCustomer) {
+        String phoneNumber = readText(scanner, "Phone number: ");
+        String currentPin = readText(scanner, "Current PIN: ");
+        String newPin = readText(scanner, "New PIN: ");
+
+        try {
+            authService.changePin(phoneNumber, currentPin, newPin);
+            System.out.println("PIN changed successfully.");
+            return authService.login(phoneNumber, newPin);
+        } catch (InvalidPinException exception) {
+            System.out.println(exception.getMessage());
+            return loggedInCustomer;
+        }
     }
 
     private static Customer selectCustomer(Scanner scanner, AccountService accountService) {
