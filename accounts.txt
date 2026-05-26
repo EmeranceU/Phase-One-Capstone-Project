@@ -1,0 +1,2 @@
+WAL-1 | 1 | WalletAccount | 5000
+SAV-1 | 1 | SavingsAccount | 10000
