@@ -31,7 +31,11 @@ public class CustomerDAOImpl implements CustomerDAO {
 
             try (ResultSet keys = statement.getGeneratedKeys()) {
                 if (keys.next()) {
-                    customer.setCustomerId(String.valueOf(keys.getInt(1)));
+                    int databaseId = keys.getInt(1);
+                    customer.setDatabaseId(databaseId);
+                    if (customer.getCustomerId() == null || customer.getCustomerId().isBlank()) {
+                        customer.setCustomerId(String.valueOf(databaseId));
+                    }
                 }
             }
         } catch (SQLException exception) {
@@ -97,7 +101,7 @@ public class CustomerDAOImpl implements CustomerDAO {
             statement.setString(1, customer.getFullName());
             statement.setString(2, customer.getPhoneNumber());
             statement.setString(3, customer.getPin());
-            statement.setInt(4, parseCustomerId(customer.getCustomerId()));
+            statement.setInt(4, resolveDatabaseId(customer));
             statement.executeUpdate();
         } catch (SQLException exception) {
             throw new RuntimeException("Failed to update customer", exception);
@@ -117,18 +121,26 @@ public class CustomerDAOImpl implements CustomerDAO {
     }
 
     private Customer mapCustomer(ResultSet resultSet) throws SQLException {
-        String customerId = String.valueOf(resultSet.getInt("id"));
+        int databaseId = resultSet.getInt("id");
         String fullName = resultSet.getString("full_name");
         String phoneNumber = resultSet.getString("phone_number");
         String pin = resultSet.getString("pin");
-        return new Customer(customerId, fullName, null, phoneNumber, pin);
+
+        Customer customer = new Customer(String.valueOf(databaseId), fullName, null, phoneNumber, pin);
+        customer.setDatabaseId(databaseId);
+        return customer;
     }
 
-    private int parseCustomerId(String customerId) {
+    private int resolveDatabaseId(Customer customer) {
+        if (customer.getDatabaseId() != null) {
+            return customer.getDatabaseId();
+        }
+
+        String customerId = customer.getCustomerId();
         try {
             return Integer.parseInt(customerId);
         } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("Customer ID must be numeric for JDBC update", exception);
+            throw new IllegalArgumentException("Customer must have a numeric database ID for JDBC update", exception);
         }
     }
 }
