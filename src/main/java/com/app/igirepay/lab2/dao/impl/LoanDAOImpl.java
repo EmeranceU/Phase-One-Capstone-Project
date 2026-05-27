@@ -16,6 +16,7 @@ import com.app.igirepay.lab2.dao.LoanDAO;
 
 public class LoanDAOImpl implements LoanDAO {
 
+    private static final String ENSURE_REPAYMENT_STATUS_SQL = "ALTER TABLE IF EXISTS loans ALTER COLUMN repayment_status TYPE VARCHAR(255)";
     private static final String SAVE_SQL = "INSERT INTO loans (customer_id, amount, interest_rate, approved, repayment_status) VALUES (?, ?, ?, ?, ?)";
     private static final String FIND_BY_ID_SQL = "SELECT id, customer_id, amount, interest_rate, approved, repayment_status, created_at FROM loans WHERE id = ?";
     private static final String FIND_ALL_SQL = "SELECT id, customer_id, amount, interest_rate, approved, repayment_status, created_at FROM loans ORDER BY id";
@@ -30,7 +31,10 @@ public class LoanDAOImpl implements LoanDAO {
         }
 
         try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement ensureSchemaStatement = connection.prepareStatement(ENSURE_REPAYMENT_STATUS_SQL);
              PreparedStatement statement = connection.prepareStatement(SAVE_SQL, Statement.RETURN_GENERATED_KEYS)) {
+
+            ensureSchemaStatement.executeUpdate();
 
             statement.setInt(1, resolveCustomerDatabaseId(loan));
             statement.setBigDecimal(2, loan.getAmount());

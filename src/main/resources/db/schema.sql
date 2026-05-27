@@ -45,10 +45,13 @@ CREATE TABLE IF NOT EXISTS loans (
     amount NUMERIC(14, 2) NOT NULL,
     interest_rate NUMERIC(5, 2) NOT NULL,
     approved BOOLEAN NOT NULL DEFAULT FALSE,
-    repayment_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    repayment_status VARCHAR(255) NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_loans_customer
         FOREIGN KEY (customer_id)
         REFERENCES customers (id)
         ON DELETE CASCADE
 );
+
+ALTER TABLE IF EXISTS loans
+    ALTER COLUMN repayment_status TYPE VARCHAR(255);
