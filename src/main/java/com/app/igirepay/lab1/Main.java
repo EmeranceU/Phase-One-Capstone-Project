@@ -14,7 +14,9 @@ import com.app.igirepay.lab1.service.AccountService;
 import com.app.igirepay.lab1.service.AuthService;
 import com.app.igirepay.lab1.service.LoanService;
 import com.app.igirepay.lab1.service.TransactionService;
+import com.app.igirepay.lab2.dao.AccountDAO;
 import com.app.igirepay.lab2.dao.CustomerDAO;
+import com.app.igirepay.lab2.dao.impl.AccountDAOImpl;
 import com.app.igirepay.lab2.dao.impl.CustomerDAOImpl;
 
 import java.math.BigDecimal;
@@ -33,10 +35,11 @@ public class Main {
         // use a shared FileHandler so reads/writes target the same files
         com.app.igirepay.lab1.util.FileHandler fileHandler = new com.app.igirepay.lab1.util.FileHandler();
         
-        // Create CustomerDAO for PostgreSQL integration
+        // Create DAOs for PostgreSQL integration
         CustomerDAO customerDAO = new CustomerDAOImpl();
+        AccountDAO accountDAO = new AccountDAOImpl();
         
-        AccountService accountService = new AccountService(fileHandler, customerDAO);
+        AccountService accountService = new AccountService(fileHandler, customerDAO, accountDAO);
         TransactionService transactionService = new TransactionService(fileHandler);
         AuthService authService = new AuthService(accountService, fileHandler, customerDAO);
         LoanService loanService = new LoanService(accountService, transactionService, fileHandler);
