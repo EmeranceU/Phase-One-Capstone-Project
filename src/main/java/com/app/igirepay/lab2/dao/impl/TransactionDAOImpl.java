@@ -17,6 +17,12 @@ import com.app.igirepay.lab2.dao.TransactionDAO;
 public class TransactionDAOImpl implements TransactionDAO {
 
     private static final String SAVE_SQL = "INSERT INTO transactions (transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    private static final String FIND_BY_ID_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions WHERE id = ?";
+    private static final String FIND_ALL_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions ORDER BY id";
+    private static final String FIND_BY_REFERENCE_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions WHERE reference_id = ?";
+    private static final String FIND_BY_SOURCE_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions WHERE source_account_id = ? ORDER BY id";
+    private static final String FIND_BY_DESTINATION_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions WHERE destination_account_id = ? ORDER BY id";
+    private static final String FIND_BY_CUSTOMER_SQL = "SELECT DISTINCT t.id, t.transaction_id, t.reference_id, t.source_account_id, t.destination_account_id, t.transaction_type, t.amount, t.created_at FROM transactions t LEFT JOIN accounts source_account ON t.source_account_id = source_account.id LEFT JOIN accounts destination_account ON t.destination_account_id = destination_account.id WHERE source_account.customer_id = ? OR destination_account.customer_id = ? ORDER BY t.id";
 
     @Override
     public void save(Transaction transaction) {
@@ -52,12 +58,31 @@ public class TransactionDAOImpl implements TransactionDAO {
 
     @Override
     public Transaction findById(Integer id) {
-        throw new UnsupportedOperationException("findById not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_ID_SQL)) {
+
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapTransaction(resultSet);
+                }
+                return null;
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find transaction by database ID", exception);
+        }
     }
 
     @Override
     public List<Transaction> findAll() {
-        throw new UnsupportedOperationException("findAll not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_ALL_SQL);
+             ResultSet resultSet = statement.executeQuery()) {
+
+            return mapTransactionList(resultSet);
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to load transactions", exception);
+        }
     }
 
     @Override
@@ -72,22 +97,62 @@ public class TransactionDAOImpl implements TransactionDAO {
 
     @Override
     public Transaction findByReferenceId(String referenceId) {
-        throw new UnsupportedOperationException("findByReferenceId not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_REFERENCE_SQL)) {
+
+            statement.setString(1, referenceId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapTransaction(resultSet);
+                }
+                return null;
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find transaction by reference ID", exception);
+        }
     }
 
     @Override
     public List<Transaction> findBySourceAccountDatabaseId(Integer accountDatabaseId) {
-        throw new UnsupportedOperationException("findBySourceAccountDatabaseId not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_SOURCE_SQL)) {
+
+            statement.setInt(1, accountDatabaseId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapTransactionList(resultSet);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find transactions by source account database ID", exception);
+        }
     }
 
     @Override
     public List<Transaction> findByDestinationAccountDatabaseId(Integer accountDatabaseId) {
-        throw new UnsupportedOperationException("findByDestinationAccountDatabaseId not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_DESTINATION_SQL)) {
+
+            statement.setInt(1, accountDatabaseId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapTransactionList(resultSet);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find transactions by destination account database ID", exception);
+        }
     }
 
     @Override
     public List<Transaction> findByCustomerDatabaseId(Integer customerDatabaseId) {
-        throw new UnsupportedOperationException("findByCustomerDatabaseId not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_CUSTOMER_SQL)) {
+
+            statement.setInt(1, customerDatabaseId);
+            statement.setInt(2, customerDatabaseId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapTransactionList(resultSet, customerDatabaseId);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find transactions by customer database ID", exception);
+        }
     }
 
     private String resolveTransactionId(Transaction transaction) {
@@ -133,14 +198,22 @@ public class TransactionDAOImpl implements TransactionDAO {
     }
 
     private List<Transaction> mapTransactionList(ResultSet resultSet) throws SQLException {
+        return mapTransactionList(resultSet, null);
+    }
+
+    private List<Transaction> mapTransactionList(ResultSet resultSet, Integer customerDatabaseId) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
         while (resultSet.next()) {
-            transactions.add(mapTransaction(resultSet));
+            transactions.add(mapTransaction(resultSet, customerDatabaseId));
         }
         return transactions;
     }
 
     private Transaction mapTransaction(ResultSet resultSet) throws SQLException {
+        return mapTransaction(resultSet, null);
+    }
+
+    private Transaction mapTransaction(ResultSet resultSet, Integer customerDatabaseId) throws SQLException {
         int databaseId = resultSet.getInt("id");
         String transactionId = resultSet.getString("transaction_id");
         String referenceId = resultSet.getString("reference_id");
@@ -153,7 +226,7 @@ public class TransactionDAOImpl implements TransactionDAO {
 
         Transaction transaction = new Transaction(
                 transactionId,
-                null,
+            customerDatabaseId == null ? null : String.valueOf(customerDatabaseId),
                 sourceAccountDatabaseId == null ? null : String.valueOf(sourceAccountDatabaseId),
                 destinationAccountDatabaseId == null ? null : String.valueOf(destinationAccountDatabaseId),
                 referenceId,
@@ -162,6 +235,7 @@ public class TransactionDAOImpl implements TransactionDAO {
                 timestamp
         );
         transaction.setDatabaseId(databaseId);
+        transaction.setCustomerDatabaseId(customerDatabaseId);
         transaction.setAccountDatabaseId(sourceAccountDatabaseId);
         transaction.setDestinationAccountDatabaseId(destinationAccountDatabaseId);
         return transaction;
