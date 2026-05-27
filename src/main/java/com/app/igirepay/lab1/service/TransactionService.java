@@ -1,14 +1,5 @@
 package com.app.igirepay.lab1.service;
 
-import com.app.igirepay.lab1.exception.DuplicateTransactionException;
-import com.app.igirepay.lab1.exception.InsufficientBalanceException;
-import com.app.igirepay.lab1.exception.InvalidAmountException;
-import com.app.igirepay.lab1.model.Account;
-import com.app.igirepay.lab1.model.Customer;
-import com.app.igirepay.lab1.model.Transaction;
-import com.app.igirepay.lab2.dao.AccountDAO;
-import com.app.igirepay.lab2.dao.TransactionDAO;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,6 +7,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.app.igirepay.lab1.exception.DuplicateTransactionException;
+import com.app.igirepay.lab1.exception.InsufficientBalanceException;
+import com.app.igirepay.lab1.exception.InvalidAmountException;
+import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab1.model.Transaction;
+import com.app.igirepay.lab1.model.WalletAccount;
+import com.app.igirepay.lab2.dao.AccountDAO;
+import com.app.igirepay.lab2.dao.TransactionDAO;
 
 public class TransactionService {
 
@@ -256,6 +257,10 @@ public class TransactionService {
 
         if (destinationAccount == null) {
             throw new IllegalArgumentException("destination account must exist");
+        }
+
+        if (!(sourceAccount instanceof WalletAccount)) {
+            throw new IllegalArgumentException("Only wallet accounts can transfer money.");
         }
 
         if (loggedInCustomer.getCustomerId() == null || !loggedInCustomer.getCustomerId().equals(sourceAccount.getCustomerId())) {
