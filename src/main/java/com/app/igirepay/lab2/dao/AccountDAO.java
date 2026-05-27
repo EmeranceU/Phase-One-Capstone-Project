@@ -1,8 +1,8 @@
 package com.app.igirepay.lab2.dao;
 
-import com.app.igirepay.lab1.model.Account;
-
 import java.util.List;
+
+import com.app.igirepay.lab1.model.Account;
 
 public interface AccountDAO extends GenericDAO<Account, Integer> {
 
