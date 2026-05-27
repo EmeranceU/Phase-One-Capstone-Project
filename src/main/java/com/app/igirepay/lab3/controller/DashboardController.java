@@ -16,6 +16,7 @@ import com.app.igirepay.lab1.model.Loan;
 import com.app.igirepay.lab1.model.SavingsAccount;
 import com.app.igirepay.lab1.model.Transaction;
 import com.app.igirepay.lab1.model.WalletAccount;
+import com.app.igirepay.lab1.service.DailyTransactionSummary;
 import com.app.igirepay.lab3.util.AppContext;
 import com.app.igirepay.lab3.util.SceneNavigator;
 
@@ -340,6 +341,20 @@ public class DashboardController {
             setMessage("Failed to export transactions.", true);
             showPopup("Failed to export transactions.", AlertType.ERROR);
         }
+    }
+
+    @FXML
+    private void handleDailySummary() {
+        Customer customer = requireCurrentCustomer();
+        if (customer == null) {
+            return;
+        }
+
+        DailyTransactionSummary summary = context.getTransactionService().getDailyTransactionSummary(customer, context.getAccountService());
+        String message = summary.toDisplayString();
+        setMessage("Daily summary loaded.", false);
+        showPopup(message, AlertType.INFORMATION);
+        outputArea.setText(message);
     }
 
     @FXML
