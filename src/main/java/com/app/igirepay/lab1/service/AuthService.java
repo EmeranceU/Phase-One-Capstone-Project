@@ -3,6 +3,7 @@ package com.app.igirepay.lab1.service;
 import com.app.igirepay.lab1.exception.InvalidPinException;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.util.FileHandler;
+import com.app.igirepay.lab2.dao.CustomerDAO;
 
 import java.util.Objects;
 
@@ -10,14 +11,20 @@ public class AuthService {
 
 	private final AccountService accountService;
 	private final FileHandler fileHandler;
+	private final CustomerDAO customerDAO;
 
 	public AuthService(AccountService accountService) {
-		this(accountService, new FileHandler());
+		this(accountService, new FileHandler(), null);
 	}
 
 	public AuthService(AccountService accountService, FileHandler fileHandler) {
+		this(accountService, fileHandler, null);
+	}
+
+	public AuthService(AccountService accountService, FileHandler fileHandler, CustomerDAO customerDAO) {
 		this.accountService = Objects.requireNonNull(accountService, "accountService must not be null");
 		this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
+		this.customerDAO = customerDAO;
 	}
 
 	public Customer login(String phoneNumber, String pin) throws InvalidPinException {
@@ -37,6 +44,15 @@ public class AuthService {
 
 		customer.setPin(newPin.trim());
 		fileHandler.saveCustomer(customer);
+		
+		if (customerDAO != null) {
+			try {
+				customerDAO.update(customer);
+			} catch (Exception exception) {
+				System.err.println("Warning: Failed to update PIN in PostgreSQL: " + exception.getMessage());
+			}
+		}
+		
 		return true;
 	}
 

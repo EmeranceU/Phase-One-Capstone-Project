@@ -3,25 +3,33 @@ package com.app.igirepay.lab1.service;
 import com.app.igirepay.lab1.model.Account;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.util.FileHandler;
+import com.app.igirepay.lab2.dao.CustomerDAO;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.Objects;
 
 public class AccountService {
 
     private final Map<String, Customer> customers = new LinkedHashMap<>();
     private final Map<String, Account> accounts = new LinkedHashMap<>();
     private final FileHandler fileHandler;
+    private final CustomerDAO customerDAO;
 
     public AccountService() {
-        this(new FileHandler());
+        this(new FileHandler(), null);
     }
 
     public AccountService(FileHandler fileHandler) {
+        this(fileHandler, null);
+    }
+
+    public AccountService(FileHandler fileHandler, CustomerDAO customerDAO) {
         this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
+        this.customerDAO = customerDAO;
     }
 
     public boolean addCustomer(Customer customer) {
@@ -31,6 +39,15 @@ public class AccountService {
 
         customers.put(customer.getCustomerId(), customer);
         fileHandler.saveCustomer(customer);
+        
+        if (customerDAO != null) {
+            try {
+                customerDAO.save(customer);
+            } catch (Exception exception) {
+                System.err.println("Warning: Failed to persist customer to PostgreSQL: " + exception.getMessage());
+            }
+        }
+        
         return true;
     }
 
