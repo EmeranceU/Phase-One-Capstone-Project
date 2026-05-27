@@ -5,6 +5,10 @@ import java.time.LocalDateTime;
 
 public class Transaction {
 
+	private Integer databaseId;
+	private Integer customerDatabaseId;
+	private Integer accountDatabaseId;
+	private Integer destinationAccountDatabaseId;
 	private String transactionId;
 	private String customerId;
 	private String accountId;
@@ -27,6 +31,38 @@ public class Transaction {
 
 	public String getTransactionId() {
 		return transactionId;
+	}
+
+	public Integer getDatabaseId() {
+		return databaseId;
+	}
+
+	public void setDatabaseId(Integer databaseId) {
+		this.databaseId = databaseId;
+	}
+
+	public Integer getCustomerDatabaseId() {
+		return customerDatabaseId;
+	}
+
+	public void setCustomerDatabaseId(Integer customerDatabaseId) {
+		this.customerDatabaseId = customerDatabaseId;
+	}
+
+	public Integer getAccountDatabaseId() {
+		return accountDatabaseId;
+	}
+
+	public void setAccountDatabaseId(Integer accountDatabaseId) {
+		this.accountDatabaseId = accountDatabaseId;
+	}
+
+	public Integer getDestinationAccountDatabaseId() {
+		return destinationAccountDatabaseId;
+	}
+
+	public void setDestinationAccountDatabaseId(Integer destinationAccountDatabaseId) {
+		this.destinationAccountDatabaseId = destinationAccountDatabaseId;
 	}
 
 	public void setTransactionId(String transactionId) {
@@ -92,7 +128,11 @@ public class Transaction {
 	@Override
 	public String toString() {
 		return "Transaction{" +
-				"transactionId='" + transactionId + '\'' +
+				"databaseId=" + databaseId +
+				", customerDatabaseId=" + customerDatabaseId +
+				", accountDatabaseId=" + accountDatabaseId +
+				", destinationAccountDatabaseId=" + destinationAccountDatabaseId +
+				", transactionId='" + transactionId + '\'' +
 				", customerId='" + customerId + '\'' +
 				", accountId='" + accountId + '\'' +
 				", destinationAccountId='" + destinationAccountId + '\'' +

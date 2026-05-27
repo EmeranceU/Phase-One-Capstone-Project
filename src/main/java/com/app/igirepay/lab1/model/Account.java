@@ -6,6 +6,8 @@ import java.util.Objects;
 
 public abstract class Account {
 
+	private Integer databaseId;
+	private Integer customerDatabaseId;
 	private String accountId;
 	private String customerId;
 	private BigDecimal balance;
@@ -18,6 +20,22 @@ public abstract class Account {
 
 	public String getAccountId() {
 		return accountId;
+	}
+
+	public Integer getDatabaseId() {
+		return databaseId;
+	}
+
+	public void setDatabaseId(Integer databaseId) {
+		this.databaseId = databaseId;
+	}
+
+	public Integer getCustomerDatabaseId() {
+		return customerDatabaseId;
+	}
+
+	public void setCustomerDatabaseId(Integer customerDatabaseId) {
+		this.customerDatabaseId = customerDatabaseId;
 	}
 
 	public void setAccountId(String accountId) {
@@ -81,7 +99,9 @@ public abstract class Account {
 	@Override
 	public String toString() {
 		return "Account{" +
-				"accountId='" + accountId + '\'' +
+				"databaseId=" + databaseId +
+				", customerDatabaseId=" + customerDatabaseId +
+				", accountId='" + accountId + '\'' +
 				", customerId='" + customerId + '\'' +
 				", balance=" + balance +
 				'}';

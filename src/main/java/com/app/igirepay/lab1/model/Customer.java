@@ -5,6 +5,7 @@ import java.util.List;
 
 public class Customer {
 
+	private Integer databaseId;
 	private String customerId;
 	private String fullName;
 	private String email;
@@ -27,6 +28,14 @@ public class Customer {
 
 	public String getCustomerId() {
 		return customerId;
+	}
+
+	public Integer getDatabaseId() {
+		return databaseId;
+	}
+
+	public void setDatabaseId(Integer databaseId) {
+		this.databaseId = databaseId;
 	}
 
 	public void setCustomerId(String customerId) {
@@ -98,7 +107,8 @@ public class Customer {
 	@Override
 	public String toString() {
 		return "Customer{" +
-				"customerId='" + customerId + '\'' +
+				"databaseId=" + databaseId +
+				", customerId='" + customerId + '\'' +
 				", fullName='" + fullName + '\'' +
 				", email='" + email + '\'' +
 				", phoneNumber='" + phoneNumber + '\'' +

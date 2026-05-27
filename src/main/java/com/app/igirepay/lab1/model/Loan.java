@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 
 public class Loan {
 
+	private Integer databaseId;
+	private Integer customerDatabaseId;
 	private String loanId;
 	private String customerId;
 	private BigDecimal amount;
@@ -25,6 +27,22 @@ public class Loan {
 
 	public String getLoanId() {
 		return loanId;
+	}
+
+	public Integer getDatabaseId() {
+		return databaseId;
+	}
+
+	public void setDatabaseId(Integer databaseId) {
+		this.databaseId = databaseId;
+	}
+
+	public Integer getCustomerDatabaseId() {
+		return customerDatabaseId;
+	}
+
+	public void setCustomerDatabaseId(Integer customerDatabaseId) {
+		this.customerDatabaseId = customerDatabaseId;
 	}
 
 	public void setLoanId(String loanId) {
@@ -82,7 +100,9 @@ public class Loan {
 	@Override
 	public String toString() {
 		return "Loan{" +
-				"loanId='" + loanId + '\'' +
+				"databaseId=" + databaseId +
+				", customerDatabaseId=" + customerDatabaseId +
+				", loanId='" + loanId + '\'' +
 				", customerId='" + customerId + '\'' +
 				", amount=" + amount +
 				", interestRate=" + interestRate +
