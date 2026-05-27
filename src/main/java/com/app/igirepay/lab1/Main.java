@@ -24,8 +24,8 @@ import com.app.igirepay.lab2.dao.CustomerDAO;
 import com.app.igirepay.lab2.dao.TransactionDAO;
 import com.app.igirepay.lab2.dao.impl.AccountDAOImpl;
 import com.app.igirepay.lab2.dao.impl.CustomerDAOImpl;
-import com.app.igirepay.lab2.dao.impl.TransactionDAOImpl;
 import com.app.igirepay.lab2.dao.impl.LoanDAOImpl;
+import com.app.igirepay.lab2.dao.impl.TransactionDAOImpl;
 
 public class Main {
 
