@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 CREATE TABLE IF NOT EXISTS transactions (
     id BIGSERIAL PRIMARY KEY,
+    transaction_id VARCHAR(100) NOT NULL,
     reference_id VARCHAR(100) NOT NULL UNIQUE,
     source_account_id BIGINT,
     destination_account_id BIGINT,
