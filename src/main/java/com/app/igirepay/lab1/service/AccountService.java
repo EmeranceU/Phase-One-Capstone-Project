@@ -171,6 +171,49 @@ public class AccountService {
         return "Savings account created: " + account.getAccountId();
     }
 
+    public String deleteInactiveAccount(String customerId, String accountId) {
+        Customer customer = findCustomerById(customerId);
+        if (customer == null) {
+            return "Customer not found.";
+        }
+
+        String normalizedAccountId = accountId == null ? "" : accountId.trim();
+        if (normalizedAccountId.isEmpty()) {
+            return "Account ID is required.";
+        }
+
+        Account account = findAccountById(normalizedAccountId);
+        if (account == null) {
+            return "Account not found.";
+        }
+
+        if (!customer.getCustomerId().equals(account.getCustomerId())) {
+            return "Account not found for your profile.";
+        }
+
+        if (account.getBalance() != null && account.getBalance().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return "Cannot delete account with remaining balance.";
+        }
+
+        if (accountDAO == null) {
+            return "Account deletion is unavailable.";
+        }
+
+        try {
+            if (account.getDatabaseId() == null) {
+                return "Account cannot be deleted because its database ID is missing.";
+            }
+
+            accountDAO.delete(account.getDatabaseId());
+            accounts.remove(account.getAccountId());
+            customer.removeAccount(account.getAccountId());
+            return "Account deleted successfully.";
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to delete inactive account from PostgreSQL: " + exception.getMessage());
+            return "Failed to delete account.";
+        }
+    }
+
     public Account findAccountById(String accountId) {
         if (accountId == null) {
             return null;

@@ -44,7 +44,9 @@
             <Button text="Withdraw Money" onAction="#handleWithdrawMoney" styleClass="btn-secondary" maxWidth="Infinity"/>
             <Button text="Transfer Money" onAction="#handleTransferMoney" styleClass="btn-secondary" maxWidth="Infinity"/>
             <Button text="Check Balance" onAction="#handleCheckBalance" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Delete Inactive Account" onAction="#handleDeleteInactiveAccount" styleClass="btn-secondary" maxWidth="Infinity"/>
             <Button text="Transaction History" onAction="#handleTransactionHistory" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Export Transactions" onAction="#handleExportTransactions" styleClass="btn-secondary" maxWidth="Infinity"/>
             <Button text="Request Loan" onAction="#handleRequestLoan" styleClass="btn-secondary" maxWidth="Infinity"/>
             <Button text="View Loan History" onAction="#handleViewLoanHistory" styleClass="btn-secondary" maxWidth="Infinity"/>
             <Button text="Change PIN" onAction="#handleChangePin" styleClass="btn-secondary" maxWidth="Infinity"/>

@@ -2,6 +2,7 @@ package com.app.igirepay.lab3.controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.stage.Modality;
 import javafx.stage.Window;
 
 public class DashboardController {
@@ -229,6 +231,28 @@ public class DashboardController {
     }
 
     @FXML
+    private void handleDeleteInactiveAccount() {
+        Customer customer = requireCurrentCustomer();
+        if (customer == null) {
+            return;
+        }
+
+        String result = context.getAccountService().deleteInactiveAccount(customer.getCustomerId(), accountIdField.getText());
+        context.reloadAllFromDatabase();
+        renderAccountSummary(context.getCurrentCustomer());
+
+        if ("Account deleted successfully.".equals(result)) {
+            setMessage(result, false);
+            showPopup(result, AlertType.INFORMATION);
+            showAccounts();
+            return;
+        }
+
+        setMessage(result, true);
+        showPopup(result, AlertType.ERROR);
+    }
+
+    @FXML
     private void handleTransactionHistory() {
         Customer customer = requireCurrentCustomer();
         if (customer == null) {
@@ -294,6 +318,28 @@ public class DashboardController {
 
         String text = loans.stream().map(Loan::toString).collect(Collectors.joining("\n\n"));
         outputArea.setText(text);
+    }
+
+    @FXML
+    private void handleExportTransactions() {
+        Customer customer = requireCurrentCustomer();
+        if (customer == null) {
+            return;
+        }
+
+        try {
+            Path exportPath = context.getTransactionService().exportTransactionHistoryToCsv(customer);
+            String message = "Transactions exported successfully.";
+            setMessage(message, false);
+            showPopup(message, AlertType.INFORMATION);
+            outputArea.setText("Exported to: " + exportPath.toAbsolutePath());
+        } catch (IllegalStateException exception) {
+            setMessage(exception.getMessage(), true);
+            showPopup(exception.getMessage(), AlertType.ERROR);
+        } catch (RuntimeException exception) {
+            setMessage("Failed to export transactions.", true);
+            showPopup("Failed to export transactions.", AlertType.ERROR);
+        }
     }
 
     @FXML
@@ -484,6 +530,7 @@ public class DashboardController {
         Window owner = messageLabel.getScene() == null ? null : messageLabel.getScene().getWindow();
         if (owner != null) {
             alert.initOwner(owner);
+            alert.initModality(Modality.WINDOW_MODAL);
         }
         alert.showAndWait();
     }
