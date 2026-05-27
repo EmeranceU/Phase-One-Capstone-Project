@@ -52,6 +52,9 @@ public class TransactionDAOImpl implements TransactionDAO {
                 }
             }
         } catch (SQLException exception) {
+            if (isDuplicateReferenceViolation(exception)) {
+                throw new IllegalStateException("Duplicate transaction reference ID: " + transaction.getReferenceId(), exception);
+            }
             throw new RuntimeException("Failed to save transaction", exception);
         }
     }
@@ -244,5 +247,11 @@ public class TransactionDAOImpl implements TransactionDAO {
     private Integer getNullableInteger(ResultSet resultSet, String columnName) throws SQLException {
         int value = resultSet.getInt(columnName);
         return resultSet.wasNull() ? null : value;
+    }
+
+    private boolean isDuplicateReferenceViolation(SQLException exception) {
+        return "23505".equals(exception.getSQLState())
+                && exception.getMessage() != null
+                && exception.getMessage().contains("reference_id");
     }
 }
