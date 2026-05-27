@@ -21,6 +21,7 @@ public class AccountDAOImpl implements AccountDAO {
     private static final String FIND_BY_BUSINESS_ID_SQL = "SELECT id, customer_id, account_type, balance FROM accounts WHERE CAST(id AS TEXT) = ?";
     private static final String FIND_BY_TYPE_SQL = "SELECT id, customer_id, account_type, balance FROM accounts WHERE account_type = ? ORDER BY id";
     private static final String UPDATE_SQL = "UPDATE accounts SET balance = ? WHERE id = ?";
+    private static final String DELETE_SQL = "DELETE FROM accounts WHERE id = ?";
 
     @Override
     public void save(Account account) {
@@ -102,7 +103,21 @@ public class AccountDAOImpl implements AccountDAO {
 
     @Override
     public void delete(Integer id) {
-        throw new UnsupportedOperationException("delete not implemented yet");
+        if (id == null) {
+            throw new IllegalArgumentException("Database id must not be null");
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(DELETE_SQL)) {
+
+            statement.setInt(1, id);
+            int rows = statement.executeUpdate();
+            if (rows == 0) {
+                throw new RuntimeException("No account found with id " + id);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to delete account", exception);
+        }
     }
 
     @Override
