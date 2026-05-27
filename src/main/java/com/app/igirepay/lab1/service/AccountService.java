@@ -115,6 +115,11 @@ public class AccountService {
             return false;
         }
 
+        // Set customer database ID for JDBC persistence if available
+        if (customer.getDatabaseId() != null) {
+            account.setCustomerDatabaseId(customer.getDatabaseId());
+        }
+        
         if (!addAccount(account)) {
             return false;
         }
@@ -145,6 +150,16 @@ public class AccountService {
             return List.of();
         }
 
+        // If customer has database ID and accountDAO is available, load from PostgreSQL
+        if (customer.getDatabaseId() != null && accountDAO != null) {
+            try {
+                return accountDAO.findByCustomerDatabaseId(customer.getDatabaseId());
+            } catch (Exception exception) {
+                System.err.println("Warning: Failed to load accounts from PostgreSQL: " + exception.getMessage());
+            }
+        }
+        
+        // Fall back to in-memory accounts
         return customer.getAccounts();
     }
 
