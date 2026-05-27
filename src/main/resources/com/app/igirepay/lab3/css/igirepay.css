@@ -35,7 +35,7 @@
 .brand-title {
     -fx-font-size: 30px;
     -fx-font-weight: 800;
-    -fx-text-fill: #f5c94c;
+    -fx-text-fill: #ffffff; /* main headers: white for contrast */
 }
 
 .header-title {
@@ -51,8 +51,13 @@
 }
 
 .subtitle {
-    -fx-text-fill: #eaf2ed;
+    -fx-text-fill: #f5c94c; /* soft gold subtitles */
     -fx-font-size: 13px;
+}
+
+/* Improve label contrast on dark auth background */
+.auth-root .label {
+    -fx-text-fill: #ffffff;
 }
 
 .label {

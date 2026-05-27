@@ -88,16 +88,16 @@ public class DashboardController {
         }
 
         WalletAccount account = new WalletAccount(context.nextWalletAccountId(), customer.getCustomerId(), initialBalance);
-        boolean created = context.getAccountService().addAccountToCustomer(customer.getCustomerId(), account);
+        String result = context.getAccountService().createWalletAccountForCustomer(customer.getCustomerId(), account);
         context.reloadAllFromDatabase();
 
-        if (created) {
-            setMessage("Wallet account created: " + account.getAccountId(), false);
+        if (result != null && result.startsWith("Wallet account created")) {
+            setMessage(result, false);
             showAccounts();
             return;
         }
 
-        setMessage("Failed to create wallet account.", true);
+        setMessage(result == null ? "Failed to create wallet account." : result, true);
     }
 
     @FXML
@@ -113,16 +113,16 @@ public class DashboardController {
         }
 
         SavingsAccount account = new SavingsAccount(context.nextSavingsAccountId(), customer.getCustomerId(), initialBalance);
-        boolean created = context.getAccountService().addAccountToCustomer(customer.getCustomerId(), account);
+        String result = context.getAccountService().createSavingsAccountForCustomer(customer.getCustomerId(), account);
         context.reloadAllFromDatabase();
 
-        if (created) {
-            setMessage("Savings account created: " + account.getAccountId(), false);
+        if (result != null && result.startsWith("Savings account created")) {
+            setMessage(result, false);
             showAccounts();
             return;
         }
 
-        setMessage("Failed to create savings account.", true);
+        setMessage(result == null ? "Failed to create savings account." : result, true);
     }
 
     @FXML

@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.SavingsAccount;
+import com.app.igirepay.lab1.model.WalletAccount;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab2.dao.AccountDAO;
 import com.app.igirepay.lab2.dao.CustomerDAO;
@@ -105,6 +107,68 @@ public class AccountService {
 
         customer.addAccount(account);
         return true;
+    }
+
+    /**
+     * Create a wallet account for customer enforcing business rules:
+     * - only one WalletAccount allowed per customer
+     * - returns a user-friendly message describing the outcome
+     */
+    public String createWalletAccountForCustomer(String customerId, WalletAccount account) {
+        Customer customer = findCustomerById(customerId);
+        if (customer == null) {
+            return "Customer not found.";
+        }
+
+        boolean hasWallet = customer.getAccounts().stream().anyMatch(a -> a instanceof WalletAccount);
+        if (hasWallet) {
+            return "You already have a wallet account.";
+        }
+
+        if (customer.getDatabaseId() != null) {
+            account.setCustomerDatabaseId(customer.getDatabaseId());
+        }
+
+        if (!addAccount(account)) {
+            return "Failed to create wallet account.";
+        }
+
+        customer.addAccount(account);
+        return "Wallet account created: " + account.getAccountId();
+    }
+
+    /**
+     * Create a savings account for customer enforcing business rules:
+     * - wallet account must exist first
+     * - only one SavingsAccount allowed per customer
+     * - returns user-friendly message describing the outcome
+     */
+    public String createSavingsAccountForCustomer(String customerId, SavingsAccount account) {
+        Customer customer = findCustomerById(customerId);
+        if (customer == null) {
+            return "Customer not found.";
+        }
+
+        boolean hasWallet = customer.getAccounts().stream().anyMatch(a -> a instanceof WalletAccount);
+        if (!hasWallet) {
+            return "Create a wallet account before opening savings.";
+        }
+
+        boolean hasSavings = customer.getAccounts().stream().anyMatch(a -> a instanceof SavingsAccount);
+        if (hasSavings) {
+            return "You already have a savings account.";
+        }
+
+        if (customer.getDatabaseId() != null) {
+            account.setCustomerDatabaseId(customer.getDatabaseId());
+        }
+
+        if (!addAccount(account)) {
+            return "Failed to create savings account.";
+        }
+
+        customer.addAccount(account);
+        return "Savings account created: " + account.getAccountId();
     }
 
     public Account findAccountById(String accountId) {
