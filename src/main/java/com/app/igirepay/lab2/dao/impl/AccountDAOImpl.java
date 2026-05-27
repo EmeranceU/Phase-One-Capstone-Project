@@ -82,7 +82,7 @@ public class AccountDAOImpl implements AccountDAO {
             throw new IllegalArgumentException("Account must not be null");
         }
 
-        Integer databaseId = resolveAccountDatabaseId(account);
+        Integer databaseId = account.getDatabaseId();
         if (databaseId == null) {
             throw new IllegalArgumentException("Account must have a database ID to update");
         }
@@ -182,20 +182,11 @@ public class AccountDAOImpl implements AccountDAO {
     }
 
     private Integer resolveAccountDatabaseId(Account account) {
-        if (account.getDatabaseId() != null) {
-            return account.getDatabaseId();
-        }
-
-        String accountId = account.getAccountId();
-        if (accountId == null) {
+        // removed fallback parsing: persistence must use databaseId only
+        if (account == null) {
             return null;
         }
-
-        try {
-            return Integer.parseInt(accountId);
-        } catch (NumberFormatException exception) {
-            return null;
-        }
+        return account.getDatabaseId();
     }
 
     private List<Account> findByAccountType(String accountType) {
