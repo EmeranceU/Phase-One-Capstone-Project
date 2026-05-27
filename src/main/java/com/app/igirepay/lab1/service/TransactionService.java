@@ -1,11 +1,19 @@
 package com.app.igirepay.lab1.service;
 
 import java.math.BigDecimal;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
 import com.app.igirepay.lab1.exception.DuplicateTransactionException;
@@ -193,6 +201,119 @@ public class TransactionService {
             System.err.println("Warning: Failed to load transaction history from PostgreSQL: " + exception.getMessage());
             return List.of();
         }
+    }
+
+    public Path exportTransactionHistoryToCsv(Customer customer) {
+        if (customer == null) {
+            throw new IllegalArgumentException("customer must not be null");
+        }
+
+        List<Transaction> transactions = customer.getDatabaseId() != null
+                ? getTransactionHistoryForCustomerFromDB(customer.getDatabaseId())
+                : getTransactionHistoryForCustomer(customer.getCustomerId());
+
+        if (transactions.isEmpty()) {
+            throw new IllegalStateException("No transactions available to export.");
+        }
+
+        String customerSuffix = customer.getCustomerId() == null ? "customer" : customer.getCustomerId();
+        String fileName = "transactions_" + customerSuffix + "_" + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
+        Path exportPath = Paths.get(fileName);
+
+        try (BufferedWriter writer = Files.newBufferedWriter(exportPath, StandardCharsets.UTF_8)) {
+            writer.write("transaction_id,reference_id,transaction_type,amount,timestamp,source_account,destination_account");
+            writer.newLine();
+
+            for (Transaction transaction : transactions) {
+                writer.write(csvValue(transaction.getTransactionId()));
+                writer.write(',');
+                writer.write(csvValue(transaction.getReferenceId()));
+                writer.write(',');
+                writer.write(csvValue(transaction.getTransactionType()));
+                writer.write(',');
+                writer.write(transaction.getAmount() == null ? "" : transaction.getAmount().toPlainString());
+                writer.write(',');
+                writer.write(csvValue(transaction.getTimestamp() == null ? null : transaction.getTimestamp().toString()));
+                writer.write(',');
+                writer.write(csvValue(transaction.getAccountId()));
+                writer.write(',');
+                writer.write(csvValue(transaction.getDestinationAccountId()));
+                writer.newLine();
+            }
+        } catch (IOException exception) {
+            throw new RuntimeException("Failed to export transaction history", exception);
+        }
+
+        return exportPath;
+    }
+
+    public DailyTransactionSummary getDailyTransactionSummary(Customer customer, AccountService accountService) {
+        if (customer == null) {
+            throw new IllegalArgumentException("customer must not be null");
+        }
+
+        List<Transaction> transactions = customer.getDatabaseId() != null
+                ? getTransactionHistoryForCustomerFromDB(customer.getDatabaseId())
+                : getTransactionHistoryForCustomer(customer.getCustomerId());
+
+        List<Account> customerAccounts = accountService == null || customer.getCustomerId() == null
+                ? List.of()
+                : accountService.getAccountsForCustomer(customer.getCustomerId());
+        Set<Integer> customerAccountIds = customerAccounts.stream()
+                .map(Account::getDatabaseId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        LocalDate today = LocalDate.now();
+        int deposits = 0;
+        int withdrawals = 0;
+        int transfers = 0;
+        BigDecimal moneyIn = BigDecimal.ZERO;
+        BigDecimal moneyOut = BigDecimal.ZERO;
+
+        for (Transaction transaction : transactions) {
+            if (transaction == null || transaction.getTimestamp() == null || !today.equals(transaction.getTimestamp().toLocalDate())) {
+                continue;
+            }
+
+            String transactionType = transaction.getTransactionType() == null ? "" : transaction.getTransactionType().trim().toUpperCase();
+            BigDecimal amount = transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount();
+
+            if ("DEPOSIT".equals(transactionType)) {
+                deposits++;
+                moneyIn = moneyIn.add(amount);
+                continue;
+            }
+
+            if ("WITHDRAWAL".equals(transactionType)) {
+                withdrawals++;
+                moneyOut = moneyOut.add(amount);
+                continue;
+            }
+
+            if ("TRANSFER".equals(transactionType)) {
+                transfers++;
+
+                if (customerAccountIds.contains(transaction.getDestinationAccountDatabaseId())) {
+                    moneyIn = moneyIn.add(amount);
+                }
+
+                if (customerAccountIds.contains(transaction.getAccountDatabaseId())) {
+                    moneyOut = moneyOut.add(amount);
+                }
+            }
+        }
+
+        return new DailyTransactionSummary(deposits, withdrawals, transfers, moneyIn, moneyOut);
+    }
+
+    private String csvValue(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String escaped = value.replace("\"", "\"\"");
+        return '"' + escaped + '"';
     }
 
     public void loadFromDatabase() {

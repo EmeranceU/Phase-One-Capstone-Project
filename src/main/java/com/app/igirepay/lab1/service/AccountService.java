@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.SavingsAccount;
+import com.app.igirepay.lab1.model.WalletAccount;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab2.dao.AccountDAO;
 import com.app.igirepay.lab2.dao.CustomerDAO;
@@ -107,6 +109,111 @@ public class AccountService {
         return true;
     }
 
+    /**
+     * Create a wallet account for customer enforcing business rules:
+     * - only one WalletAccount allowed per customer
+     * - returns a user-friendly message describing the outcome
+     */
+    public String createWalletAccountForCustomer(String customerId, WalletAccount account) {
+        Customer customer = findCustomerById(customerId);
+        if (customer == null) {
+            return "Customer not found.";
+        }
+
+        boolean hasWallet = customer.getAccounts().stream().anyMatch(a -> a instanceof WalletAccount);
+        if (hasWallet) {
+            return "You already have a wallet account.";
+        }
+
+        if (customer.getDatabaseId() != null) {
+            account.setCustomerDatabaseId(customer.getDatabaseId());
+        }
+
+        if (!addAccount(account)) {
+            return "Failed to create wallet account.";
+        }
+
+        customer.addAccount(account);
+        return "Wallet account created: " + account.getAccountId();
+    }
+
+    /**
+     * Create a savings account for customer enforcing business rules:
+     * - wallet account must exist first
+     * - only one SavingsAccount allowed per customer
+     * - returns user-friendly message describing the outcome
+     */
+    public String createSavingsAccountForCustomer(String customerId, SavingsAccount account) {
+        Customer customer = findCustomerById(customerId);
+        if (customer == null) {
+            return "Customer not found.";
+        }
+
+        boolean hasWallet = customer.getAccounts().stream().anyMatch(a -> a instanceof WalletAccount);
+        if (!hasWallet) {
+            return "Create a wallet account before opening savings.";
+        }
+
+        boolean hasSavings = customer.getAccounts().stream().anyMatch(a -> a instanceof SavingsAccount);
+        if (hasSavings) {
+            return "You already have a savings account.";
+        }
+
+        if (customer.getDatabaseId() != null) {
+            account.setCustomerDatabaseId(customer.getDatabaseId());
+        }
+
+        if (!addAccount(account)) {
+            return "Failed to create savings account.";
+        }
+
+        customer.addAccount(account);
+        return "Savings account created: " + account.getAccountId();
+    }
+
+    public String deleteInactiveAccount(String customerId, String accountId) {
+        Customer customer = findCustomerById(customerId);
+        if (customer == null) {
+            return "Customer not found.";
+        }
+
+        String normalizedAccountId = accountId == null ? "" : accountId.trim();
+        if (normalizedAccountId.isEmpty()) {
+            return "Account ID is required.";
+        }
+
+        Account account = findAccountById(normalizedAccountId);
+        if (account == null) {
+            return "Account not found.";
+        }
+
+        if (!customer.getCustomerId().equals(account.getCustomerId())) {
+            return "Account not found for your profile.";
+        }
+
+        if (account.getBalance() != null && account.getBalance().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return "Cannot delete account with remaining balance.";
+        }
+
+        if (accountDAO == null) {
+            return "Account deletion is unavailable.";
+        }
+
+        try {
+            if (account.getDatabaseId() == null) {
+                return "Account cannot be deleted because its database ID is missing.";
+            }
+
+            accountDAO.delete(account.getDatabaseId());
+            accounts.remove(account.getAccountId());
+            customer.removeAccount(account.getAccountId());
+            return "Account deleted successfully.";
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to delete inactive account from PostgreSQL: " + exception.getMessage());
+            return "Failed to delete account.";
+        }
+    }
+
     public Account findAccountById(String accountId) {
         if (accountId == null) {
             return null;
@@ -156,6 +263,20 @@ public class AccountService {
         }
 
         return customer.getAccounts();
+    }
+
+    public Account getWalletAccountForCustomer(String customerId) {
+        return getAccountsForCustomer(customerId).stream()
+                .filter(WalletAccount.class::isInstance)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public Account getSavingsAccountForCustomer(String customerId) {
+        return getAccountsForCustomer(customerId).stream()
+                .filter(SavingsAccount.class::isInstance)
+                .findFirst()
+                .orElse(null);
     }
 
     public void loadFromDatabase() {

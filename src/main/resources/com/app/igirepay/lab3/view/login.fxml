@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="14.0" alignment="CENTER" prefWidth="420.0" prefHeight="560.0"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.app.igirepay.lab3.controller.LoginController"
+      styleClass="auth-root">
+    <padding>
+        <Insets top="30.0" right="28.0" bottom="30.0" left="28.0"/>
+    </padding>
+
+    <Label text="IgirePay Technologies Ltd" styleClass="brand-title"/>
+    <Label text="Login" styleClass="subtitle"/>
+
+    <VBox spacing="6.0" styleClass="card auth-card" maxWidth="320.0">
+        <Label text="Phone Number" styleClass="field-label"/>
+        <TextField fx:id="phoneField" promptText="Enter phone number"/>
+
+        <Label text="PIN" styleClass="field-label"/>
+        <PasswordField fx:id="pinField" promptText="Enter PIN"/>
+
+        <Button text="Login" onAction="#handleLogin" maxWidth="Infinity" styleClass="btn-primary"/>
+        <Button text="Create New Account" onAction="#handleOpenRegister" maxWidth="Infinity" styleClass="btn-secondary"/>
+    </VBox>
+
+    <Label fx:id="messageLabel" visible="false" managed="false" styleClass="feedback-banner" wrapText="true"/>
+</VBox>
