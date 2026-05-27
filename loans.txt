@@ -1,2 +1,0 @@
-2026-05-26T17:31:50.050501 | 1 | 1 | 1000 | 5.00 | true | APPROVED
-2026-05-26T17:46:33.912147900 | 1 | 1 | 13000 | 5.00 | false | REJECTED: not enough successful transactions (minimum 5 required)
