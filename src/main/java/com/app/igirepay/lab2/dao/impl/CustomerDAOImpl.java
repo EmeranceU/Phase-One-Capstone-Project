@@ -1,8 +1,5 @@
 package com.app.igirepay.lab2.dao.impl;
 
-import com.app.igirepay.lab1.model.Customer;
-import com.app.igirepay.lab2.dao.CustomerDAO;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,9 +7,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
+import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab2.dao.CustomerDAO;
+
 public class CustomerDAOImpl implements CustomerDAO {
 
     private static final String SAVE_SQL = "INSERT INTO customers (full_name, phone_number, pin) VALUES (?, ?, ?)";
+    private static final String FIND_BY_PHONE_SQL = "SELECT id, full_name, phone_number, pin FROM customers WHERE phone_number = ?";
+    private static final String FIND_BY_ID_SQL = "SELECT id, full_name, phone_number, pin FROM customers WHERE id = ?";
+    private static final String FIND_ALL_SQL = "SELECT id, full_name, phone_number, pin FROM customers ORDER BY id";
 
     @Override
     public void save(Customer customer) {
@@ -36,17 +39,52 @@ public class CustomerDAOImpl implements CustomerDAO {
 
     @Override
     public Customer findByPhone(String phoneNumber) {
-        throw new UnsupportedOperationException("findByPhone not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_PHONE_SQL)) {
+
+            statement.setString(1, phoneNumber);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapCustomer(resultSet);
+                }
+                return null;
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find customer by phone", exception);
+        }
     }
 
     @Override
     public Customer findById(Integer id) {
-        throw new UnsupportedOperationException("findById not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_BY_ID_SQL)) {
+
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapCustomer(resultSet);
+                }
+                return null;
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to find customer by id", exception);
+        }
     }
 
     @Override
     public List<Customer> findAll() {
-        throw new UnsupportedOperationException("findAll not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(FIND_ALL_SQL);
+             ResultSet resultSet = statement.executeQuery()) {
+
+            List<Customer> customers = new java.util.ArrayList<>();
+            while (resultSet.next()) {
+                customers.add(mapCustomer(resultSet));
+            }
+            return customers;
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to get all customers", exception);
+        }
     }
 
     @Override
@@ -57,5 +95,13 @@ public class CustomerDAOImpl implements CustomerDAO {
     @Override
     public void delete(Integer id) {
         throw new UnsupportedOperationException("delete not implemented yet");
+    }
+
+    private Customer mapCustomer(ResultSet resultSet) throws SQLException {
+        String customerId = String.valueOf(resultSet.getInt("id"));
+        String fullName = resultSet.getString("full_name");
+        String phoneNumber = resultSet.getString("phone_number");
+        String pin = resultSet.getString("pin");
+        return new Customer(customerId, fullName, null, phoneNumber, pin);
     }
 }
