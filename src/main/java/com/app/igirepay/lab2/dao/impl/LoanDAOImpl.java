@@ -20,6 +20,8 @@ public class LoanDAOImpl implements LoanDAO {
     private static final String FIND_BY_ID_SQL = "SELECT id, customer_id, amount, interest_rate, approved, repayment_status, created_at FROM loans WHERE id = ?";
     private static final String FIND_ALL_SQL = "SELECT id, customer_id, amount, interest_rate, approved, repayment_status, created_at FROM loans ORDER BY id";
     private static final String FIND_BY_CUSTOMER_SQL = "SELECT id, customer_id, amount, interest_rate, approved, repayment_status, created_at FROM loans WHERE customer_id = ? ORDER BY id";
+    private static final String UPDATE_SQL = "UPDATE loans SET amount = ?, interest_rate = ?, approved = ?, repayment_status = ? WHERE id = ?";
+    private static final String DELETE_SQL = "DELETE FROM loans WHERE id = ?";
 
     @Override
     public void save(Loan loan) {
@@ -82,12 +84,50 @@ public class LoanDAOImpl implements LoanDAO {
 
     @Override
     public void update(Loan loan) {
-        throw new UnsupportedOperationException("update not implemented yet");
+        if (loan == null) {
+            throw new IllegalArgumentException("Loan must not be null");
+        }
+
+        Integer databaseId = loan.getDatabaseId();
+        if (databaseId == null) {
+            throw new IllegalArgumentException("Loan must have a database ID to update");
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(UPDATE_SQL)) {
+
+            statement.setBigDecimal(1, loan.getAmount());
+            statement.setBigDecimal(2, loan.getInterestRate());
+            statement.setBoolean(3, loan.isApproved());
+            statement.setString(4, loan.getRepaymentStatus());
+            statement.setInt(5, databaseId);
+
+            int rows = statement.executeUpdate();
+            if (rows == 0) {
+                throw new RuntimeException("No loan found with id " + databaseId);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to update loan", exception);
+        }
     }
 
     @Override
     public void delete(Integer id) {
-        throw new UnsupportedOperationException("delete not implemented yet");
+        if (id == null) {
+            throw new IllegalArgumentException("Database id must not be null");
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(DELETE_SQL)) {
+
+            statement.setInt(1, id);
+            int rows = statement.executeUpdate();
+            if (rows == 0) {
+                throw new RuntimeException("No loan found with id " + id);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to delete loan", exception);
+        }
     }
 
     @Override
