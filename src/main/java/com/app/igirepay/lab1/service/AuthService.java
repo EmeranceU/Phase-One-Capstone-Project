@@ -29,6 +29,14 @@ public class AuthService {
 
 	public Customer login(String phoneNumber, String pin) throws InvalidPinException {
 		Customer customer = findCustomerByPhoneNumber(phoneNumber);
+		if (customer == null && customerDAO != null) {
+			try {
+				customer = customerDAO.findByPhone(phoneNumber);
+			} catch (Exception exception) {
+				System.err.println("Warning: Failed to lookup customer in PostgreSQL: " + exception.getMessage());
+			}
+		}
+		
 		if (!isPinValid(customer, pin)) {
 			throw new InvalidPinException("Invalid phone number or PIN.");
 		}
