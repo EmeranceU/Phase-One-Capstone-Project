@@ -3,6 +3,7 @@ package com.app.igirepay.lab1.service;
 import com.app.igirepay.lab1.model.Account;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.util.FileHandler;
+import com.app.igirepay.lab2.dao.AccountDAO;
 import com.app.igirepay.lab2.dao.CustomerDAO;
 
 import java.util.ArrayList;
@@ -18,18 +19,24 @@ public class AccountService {
     private final Map<String, Account> accounts = new LinkedHashMap<>();
     private final FileHandler fileHandler;
     private final CustomerDAO customerDAO;
+    private final AccountDAO accountDAO;
 
     public AccountService() {
-        this(new FileHandler(), null);
+        this(new FileHandler(), null, null);
     }
 
     public AccountService(FileHandler fileHandler) {
-        this(fileHandler, null);
+        this(fileHandler, null, null);
     }
 
     public AccountService(FileHandler fileHandler, CustomerDAO customerDAO) {
+        this(fileHandler, customerDAO, null);
+    }
+
+    public AccountService(FileHandler fileHandler, CustomerDAO customerDAO, AccountDAO accountDAO) {
         this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
         this.customerDAO = customerDAO;
+        this.accountDAO = accountDAO;
     }
 
     public boolean addCustomer(Customer customer) {
@@ -76,6 +83,15 @@ public class AccountService {
 
         accounts.put(account.getAccountId(), account);
         fileHandler.saveAccount(account);
+        
+        if (accountDAO != null) {
+            try {
+                accountDAO.save(account);
+            } catch (Exception exception) {
+                System.err.println("Warning: Failed to persist account to PostgreSQL: " + exception.getMessage());
+            }
+        }
+        
         return true;
     }
 
