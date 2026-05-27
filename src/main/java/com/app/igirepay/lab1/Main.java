@@ -1,5 +1,10 @@
 package com.app.igirepay.lab1;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Scanner;
+
 import com.app.igirepay.lab1.exception.DuplicateTransactionException;
 import com.app.igirepay.lab1.exception.InsufficientBalanceException;
 import com.app.igirepay.lab1.exception.InvalidAmountException;
@@ -16,13 +21,10 @@ import com.app.igirepay.lab1.service.LoanService;
 import com.app.igirepay.lab1.service.TransactionService;
 import com.app.igirepay.lab2.dao.AccountDAO;
 import com.app.igirepay.lab2.dao.CustomerDAO;
+import com.app.igirepay.lab2.dao.TransactionDAO;
 import com.app.igirepay.lab2.dao.impl.AccountDAOImpl;
 import com.app.igirepay.lab2.dao.impl.CustomerDAOImpl;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Scanner;
+import com.app.igirepay.lab2.dao.impl.TransactionDAOImpl;
 
 public class Main {
 
@@ -38,9 +40,10 @@ public class Main {
         // Create DAOs for PostgreSQL integration
         CustomerDAO customerDAO = new CustomerDAOImpl();
         AccountDAO accountDAO = new AccountDAOImpl();
+        TransactionDAO transactionDAO = new TransactionDAOImpl();
         
         AccountService accountService = new AccountService(fileHandler, customerDAO, accountDAO);
-        TransactionService transactionService = new TransactionService(fileHandler);
+        TransactionService transactionService = new TransactionService(fileHandler, transactionDAO, accountDAO);
         AuthService authService = new AuthService(accountService, fileHandler, customerDAO);
         LoanService loanService = new LoanService(accountService, transactionService, fileHandler);
 

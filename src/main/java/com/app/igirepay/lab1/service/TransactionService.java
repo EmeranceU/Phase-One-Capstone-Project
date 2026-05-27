@@ -7,6 +7,8 @@ import com.app.igirepay.lab1.model.Account;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.model.Transaction;
 import com.app.igirepay.lab1.util.FileHandler;
+import com.app.igirepay.lab2.dao.AccountDAO;
+import com.app.igirepay.lab2.dao.TransactionDAO;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -22,13 +24,25 @@ public class TransactionService {
     private final List<Transaction> transactionHistory = new ArrayList<>();
     private final List<String> failedTransactionLogs = new ArrayList<>();
     private final FileHandler fileHandler;
+    private final TransactionDAO transactionDAO;
+    private final AccountDAO accountDAO;
 
     public TransactionService() {
-        this(new FileHandler());
+        this(new FileHandler(), null, null);
     }
 
     public TransactionService(FileHandler fileHandler) {
+        this(fileHandler, null, null);
+    }
+
+    public TransactionService(FileHandler fileHandler, TransactionDAO transactionDAO) {
+        this(fileHandler, transactionDAO, null);
+    }
+
+    public TransactionService(FileHandler fileHandler, TransactionDAO transactionDAO, AccountDAO accountDAO) {
         this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
+        this.transactionDAO = transactionDAO;
+        this.accountDAO = accountDAO;
     }
 
     public Transaction processDeposit(Account account, Transaction transaction)
@@ -39,7 +53,7 @@ public class TransactionService {
             validateAmount(transaction.getAmount());
 
             account.deposit(transaction.getAmount());
-            recordSuccess(transaction);
+            recordSuccess(transaction, account, null);
             return transaction;
         } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
@@ -63,7 +77,7 @@ public class TransactionService {
                 throw new InsufficientBalanceException("Insufficient balance for withdrawal.");
             }
 
-            recordSuccess(transaction);
+            recordSuccess(transaction, account, null);
             return transaction;
         } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
@@ -96,7 +110,7 @@ public class TransactionService {
             }
 
             destinationAccount.deposit(transaction.getAmount());
-            recordSuccess(transaction);
+            recordSuccess(transaction, sourceAccount, destinationAccount);
             return transaction;
         } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
@@ -125,7 +139,7 @@ public class TransactionService {
                 throw new InvalidAmountException("Transaction type is not supported for this account.");
             }
 
-            recordSuccess(transaction);
+            recordSuccess(transaction, account, null);
             return transaction;
         } catch (DuplicateTransactionException | InvalidAmountException exception) {
             recordFailure(transaction, exception.getMessage());
@@ -156,6 +170,19 @@ public class TransactionService {
         return transactionHistory.stream()
                 .filter(transaction -> customerId.equals(transaction.getCustomerId()))
                 .collect(Collectors.toList());
+    }
+
+    public List<Transaction> getTransactionHistoryForCustomerFromDB(Integer customerDatabaseId) {
+        if (customerDatabaseId == null || transactionDAO == null) {
+            return List.of();
+        }
+        
+        try {
+            return transactionDAO.findByCustomerDatabaseId(customerDatabaseId);
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to load transaction history from PostgreSQL: " + exception.getMessage());
+            return List.of();
+        }
     }
 
     // Load a transaction from file into memory without writing back to disk
@@ -239,10 +266,38 @@ public class TransactionService {
                 || transactionType.equalsIgnoreCase("TRANSFER_OUT");
     }
 
-    private void recordSuccess(Transaction transaction) {
+    private void recordSuccess(Transaction transaction, Account account, Account destinationAccount) {
         processedReferenceIds.add(transaction.getReferenceId());
         transactionHistory.add(transaction);
         fileHandler.saveTransactionHistory(transaction);
+        
+        // Persist transaction and account updates to PostgreSQL
+        if (transactionDAO != null && account != null) {
+            try {
+                // Set account database ID on transaction for JDBC persistence
+                if (account.getDatabaseId() != null) {
+                    transaction.setAccountDatabaseId(account.getDatabaseId());
+                }
+                
+                // Set destination account database ID for transfers
+                if (destinationAccount != null && destinationAccount.getDatabaseId() != null) {
+                    transaction.setDestinationAccountDatabaseId(destinationAccount.getDatabaseId());
+                }
+                
+                // Persist transaction
+                transactionDAO.save(transaction);
+                
+                // Persist account balance updates
+                if (accountDAO != null) {
+                    accountDAO.update(account);
+                    if (destinationAccount != null) {
+                        accountDAO.update(destinationAccount);
+                    }
+                }
+            } catch (Exception exception) {
+                System.err.println("Warning: Failed to persist transaction to PostgreSQL: " + exception.getMessage());
+            }
+        }
     }
 
     private void recordFailure(Transaction transaction, String message) {
