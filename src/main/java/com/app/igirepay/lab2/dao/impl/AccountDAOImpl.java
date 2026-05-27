@@ -1,16 +1,16 @@
 package com.app.igirepay.lab2.dao.impl;
 
-import com.app.igirepay.lab1.model.Account;
-import com.app.igirepay.lab1.model.SavingsAccount;
-import com.app.igirepay.lab1.model.WalletAccount;
-import com.app.igirepay.lab2.dao.AccountDAO;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+
+import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.SavingsAccount;
+import com.app.igirepay.lab1.model.WalletAccount;
+import com.app.igirepay.lab2.dao.AccountDAO;
 
 public class AccountDAOImpl implements AccountDAO {
 
@@ -20,6 +20,7 @@ public class AccountDAOImpl implements AccountDAO {
     private static final String FIND_BY_CUSTOMER_SQL = "SELECT id, customer_id, account_type, balance FROM accounts WHERE customer_id = ? ORDER BY id";
     private static final String FIND_BY_BUSINESS_ID_SQL = "SELECT id, customer_id, account_type, balance FROM accounts WHERE CAST(id AS TEXT) = ?";
     private static final String FIND_BY_TYPE_SQL = "SELECT id, customer_id, account_type, balance FROM accounts WHERE account_type = ? ORDER BY id";
+    private static final String UPDATE_SQL = "UPDATE accounts SET balance = ? WHERE id = ?";
 
     @Override
     public void save(Account account) {
@@ -76,7 +77,27 @@ public class AccountDAOImpl implements AccountDAO {
 
     @Override
     public void update(Account account) {
-        throw new UnsupportedOperationException("update not implemented yet");
+        if (account == null) {
+            throw new IllegalArgumentException("Account must not be null");
+        }
+
+        Integer databaseId = resolveAccountDatabaseId(account);
+        if (databaseId == null) {
+            throw new IllegalArgumentException("Account must have a database ID to update");
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(UPDATE_SQL)) {
+
+            statement.setBigDecimal(1, account.getBalance());
+            statement.setInt(2, databaseId);
+            int rows = statement.executeUpdate();
+            if (rows == 0) {
+                throw new RuntimeException("No account found with id " + databaseId);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to update account", exception);
+        }
     }
 
     @Override
@@ -143,6 +164,23 @@ public class AccountDAOImpl implements AccountDAO {
             return "SAVINGS";
         }
         return "WALLET";
+    }
+
+    private Integer resolveAccountDatabaseId(Account account) {
+        if (account.getDatabaseId() != null) {
+            return account.getDatabaseId();
+        }
+
+        String accountId = account.getAccountId();
+        if (accountId == null) {
+            return null;
+        }
+
+        try {
+            return Integer.parseInt(accountId);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private List<Account> findByAccountType(String accountType) {
