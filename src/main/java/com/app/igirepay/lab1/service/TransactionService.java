@@ -292,6 +292,11 @@ public class TransactionService {
         // Persist transaction and account updates to PostgreSQL
         if (transactionDAO != null && account != null) {
             try {
+                // Set customer database ID from account
+                if (account.getCustomerDatabaseId() != null) {
+                    transaction.setCustomerDatabaseId(account.getCustomerDatabaseId());
+                }
+                
                 // Set account database ID on transaction for JDBC persistence
                 if (account.getDatabaseId() != null) {
                     transaction.setAccountDatabaseId(account.getDatabaseId());
