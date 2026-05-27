@@ -14,6 +14,8 @@ import com.app.igirepay.lab1.service.AccountService;
 import com.app.igirepay.lab1.service.AuthService;
 import com.app.igirepay.lab1.service.LoanService;
 import com.app.igirepay.lab1.service.TransactionService;
+import com.app.igirepay.lab2.dao.CustomerDAO;
+import com.app.igirepay.lab2.dao.impl.CustomerDAOImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,9 +32,13 @@ public class Main {
     public static void main(String[] args) {
         // use a shared FileHandler so reads/writes target the same files
         com.app.igirepay.lab1.util.FileHandler fileHandler = new com.app.igirepay.lab1.util.FileHandler();
-        AccountService accountService = new AccountService(fileHandler);
+        
+        // Create CustomerDAO for PostgreSQL integration
+        CustomerDAO customerDAO = new CustomerDAOImpl();
+        
+        AccountService accountService = new AccountService(fileHandler, customerDAO);
         TransactionService transactionService = new TransactionService(fileHandler);
-        AuthService authService = new AuthService(accountService);
+        AuthService authService = new AuthService(accountService, fileHandler, customerDAO);
         LoanService loanService = new LoanService(accountService, transactionService, fileHandler);
 
         // Load persisted data into memory before showing menus
