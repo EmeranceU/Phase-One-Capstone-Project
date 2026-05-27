@@ -1,10 +1,5 @@
 package com.app.igirepay.lab1.service;
 
-import com.app.igirepay.lab1.model.Customer;
-import com.app.igirepay.lab1.model.Loan;
-import com.app.igirepay.lab1.model.SavingsAccount;
-import com.app.igirepay.lab2.dao.LoanDAO;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -12,6 +7,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab1.model.Loan;
+import com.app.igirepay.lab1.model.SavingsAccount;
+import com.app.igirepay.lab2.dao.LoanDAO;
 
 public class LoanService {
 

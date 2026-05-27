@@ -1,15 +1,15 @@
 package com.app.igirepay.lab1.service;
 
-import com.app.igirepay.lab1.model.Account;
-import com.app.igirepay.lab1.model.Customer;
-import com.app.igirepay.lab2.dao.AccountDAO;
-import com.app.igirepay.lab2.dao.CustomerDAO;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab2.dao.AccountDAO;
+import com.app.igirepay.lab2.dao.CustomerDAO;
 
 public class AccountService {
 
