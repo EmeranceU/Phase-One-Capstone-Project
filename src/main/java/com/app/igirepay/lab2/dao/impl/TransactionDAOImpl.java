@@ -23,6 +23,8 @@ public class TransactionDAOImpl implements TransactionDAO {
     private static final String FIND_BY_SOURCE_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions WHERE source_account_id = ? ORDER BY id";
     private static final String FIND_BY_DESTINATION_SQL = "SELECT id, transaction_id, reference_id, source_account_id, destination_account_id, transaction_type, amount, created_at FROM transactions WHERE destination_account_id = ? ORDER BY id";
     private static final String FIND_BY_CUSTOMER_SQL = "SELECT DISTINCT t.id, t.transaction_id, t.reference_id, t.source_account_id, t.destination_account_id, t.transaction_type, t.amount, t.created_at FROM transactions t LEFT JOIN accounts source_account ON t.source_account_id = source_account.id LEFT JOIN accounts destination_account ON t.destination_account_id = destination_account.id WHERE source_account.customer_id = ? OR destination_account.customer_id = ? ORDER BY t.id";
+    private static final String UPDATE_SQL = "UPDATE transactions SET transaction_id = ?, reference_id = ?, source_account_id = ?, destination_account_id = ?, transaction_type = ?, amount = ?, created_at = ? WHERE id = ?";
+    private static final String DELETE_SQL = "DELETE FROM transactions WHERE id = ?";
 
     @Override
     public void save(Transaction transaction) {
@@ -90,12 +92,56 @@ public class TransactionDAOImpl implements TransactionDAO {
 
     @Override
     public void update(Transaction transaction) {
-        throw new UnsupportedOperationException("update not implemented yet");
+        if (transaction == null) {
+            throw new IllegalArgumentException("Transaction must not be null");
+        }
+
+        Integer databaseId = transaction.getDatabaseId();
+        if (databaseId == null) {
+            throw new IllegalArgumentException("Transaction must have a database ID to update");
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(UPDATE_SQL)) {
+
+            statement.setString(1, resolveTransactionId(transaction));
+            statement.setString(2, transaction.getReferenceId());
+            setNullableInt(statement, 3, resolveSourceAccountDatabaseId(transaction));
+            setNullableInt(statement, 4, resolveDestinationAccountDatabaseId(transaction));
+            statement.setString(5, transaction.getTransactionType());
+            statement.setBigDecimal(6, transaction.getAmount());
+            statement.setTimestamp(7, Timestamp.valueOf(resolveTimestamp(transaction)));
+            statement.setInt(8, databaseId);
+
+            int rows = statement.executeUpdate();
+            if (rows == 0) {
+                throw new RuntimeException("No transaction found with id " + databaseId);
+            }
+        } catch (SQLException exception) {
+            if (isDuplicateReferenceViolation(exception)) {
+                throw new IllegalStateException("Duplicate transaction reference ID: " + transaction.getReferenceId(), exception);
+            }
+            throw new RuntimeException("Failed to update transaction", exception);
+        }
     }
 
     @Override
     public void delete(Integer id) {
-        throw new UnsupportedOperationException("delete not implemented yet");
+        if (id == null) {
+            throw new IllegalArgumentException("Database id must not be null");
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(DELETE_SQL)) {
+
+            statement.setInt(1, id);
+            int rows = statement.executeUpdate();
+            if (rows == 0) {
+                throw new RuntimeException("No transaction found with id " + id);
+            }
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to delete transaction", exception);
+        }
     }
 
     @Override
