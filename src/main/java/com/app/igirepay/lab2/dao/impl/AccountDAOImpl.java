@@ -181,14 +181,6 @@ public class AccountDAOImpl implements AccountDAO {
         return "WALLET";
     }
 
-    private Integer resolveAccountDatabaseId(Account account) {
-        // removed fallback parsing: persistence must use databaseId only
-        if (account == null) {
-            return null;
-        }
-        return account.getDatabaseId();
-    }
-
     private List<Account> findByAccountType(String accountType) {
         try (Connection connection = DatabaseConnection.getConnection();
              PreparedStatement statement = connection.prepareStatement(FIND_BY_TYPE_SQL)) {
