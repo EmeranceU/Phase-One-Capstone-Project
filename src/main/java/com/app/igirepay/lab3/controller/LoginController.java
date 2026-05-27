@@ -51,6 +51,8 @@ public class LoginController {
 
     private void setMessage(String message, boolean error) {
         messageLabel.setText(message);
+        messageLabel.setVisible(true);
+        messageLabel.setManaged(true);
         messageLabel.getStyleClass().removeAll("status-success", "status-error");
         messageLabel.getStyleClass().add(error ? "status-error" : "status-success");
     }

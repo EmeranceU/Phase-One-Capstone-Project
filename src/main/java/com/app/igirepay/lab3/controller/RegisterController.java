@@ -72,6 +72,10 @@ public class RegisterController {
 
     private void setMessage(String message, boolean error) {
         messageLabel.setText(message);
+        messageLabel.setVisible(true);
+        messageLabel.setManaged(true);
+        messageLabel.getStyleClass().removeAll("feedback-banner", "status-success", "status-error");
+        messageLabel.getStyleClass().add("feedback-banner");
         messageLabel.getStyleClass().removeAll("status-success", "status-error");
         messageLabel.getStyleClass().add(error ? "status-error" : "status-success");
     }

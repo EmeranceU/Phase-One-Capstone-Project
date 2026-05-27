@@ -12,6 +12,15 @@
 
 .top-bar {
     -fx-background-color: #113b29;
+    -fx-alignment: center-left;
+}
+
+.welcome-strip {
+    -fx-alignment: center-left;
+}
+
+.welcome-copy {
+    -fx-padding: 0;
 }
 
 .nav-panel {
@@ -24,6 +33,69 @@
     -fx-background-color: #f8faf9;
 }
 
+.welcome-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+}
+
+.welcome-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #f7e7ad;
+}
+
+.feedback-banner {
+    -fx-background-color: #f3e6bb;
+    -fx-text-fill: #2f2411;
+    -fx-background-radius: 12;
+    -fx-padding: 8 12;
+    -fx-font-weight: 600;
+    -fx-alignment: center;
+}
+
+.top-bar .header-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+}
+
+.top-bar .welcome-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+}
+
+.top-bar .welcome-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #f7e7ad;
+}
+
+.account-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-border-color: #d6e4dc;
+    -fx-padding: 16;
+}
+
+.account-type {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #16573a;
+}
+
+.account-id {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #113b29;
+}
+
+.account-balance {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #2f2411;
+}
+
 .card {
     -fx-background-color: #ffffff;
     -fx-background-radius: 14;
@@ -32,10 +104,23 @@
     -fx-border-color: #d6e4dc;
 }
 
+.auth-card {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.14), 16, 0.2, 0, 2);
+}
+
 .brand-title {
-    -fx-font-size: 30px;
+    -fx-font-size: 34px;
     -fx-font-weight: 800;
-    -fx-text-fill: #ffffff; /* main headers: white for contrast */
+    -fx-text-fill: #f7e7ad;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 10, 0.25, 0, 1);
+}
+
+.auth-root .brand-title {
+    -fx-text-fill: #f7e7ad;
+}
+
+.auth-root .subtitle {
+    -fx-text-fill: #ffffff;
 }
 
 .header-title {
@@ -50,18 +135,22 @@
     -fx-text-fill: #113b29;
 }
 
+.section-spacer {
+    -fx-padding: 4 0 0 0;
+}
+
 .subtitle {
     -fx-text-fill: #f5c94c; /* soft gold subtitles */
     -fx-font-size: 13px;
 }
 
-/* Improve label contrast on dark auth background */
-.auth-root .label {
-    -fx-text-fill: #ffffff;
-}
-
 .label {
     -fx-text-fill: #143a2b;
+}
+
+.field-label {
+    -fx-text-fill: #143a2b;
+    -fx-font-weight: 600;
 }
 
 .text-field,
@@ -95,6 +184,14 @@
     -fx-background-color: #1a6b45;
 }
 
+.button:focused,
+.text-field:focused,
+.password-field:focused,
+.text-area:focused {
+    -fx-border-color: #f7e7ad;
+    -fx-border-width: 1.4;
+}
+
 .btn-secondary {
     -fx-background-color: #f3e6bb;
     -fx-text-fill: #3b2e0b;
@@ -110,11 +207,46 @@
 }
 
 .status-success {
-    -fx-text-fill: #155e3f;
+    -fx-background-color: #155e3f;
+    -fx-background-radius: 12;
+    -fx-text-fill: #ffffff;
     -fx-font-weight: 600;
+    -fx-padding: 8 12;
 }
 
 .status-error {
-    -fx-text-fill: #7a1f13;
+    -fx-background-color: #7a1f13;
+    -fx-background-radius: 12;
+    -fx-text-fill: #ffffff;
     -fx-font-weight: 600;
+    -fx-padding: 8 12;
+}
+
+.status-info {
+    -fx-background-color: #f3e6bb;
+    -fx-background-radius: 12;
+    -fx-text-fill: #2f2411;
+    -fx-font-weight: 600;
+    -fx-padding: 8 12;
+}
+
+.output-area {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #bfd0c7;
+}
+
+.dialog-pane {
+    -fx-background-color: #f8faf9;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #113b29;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: #ffffff;
+}
+
+.dialog-pane .content.label {
+    -fx-text-fill: #143a2b;
 }

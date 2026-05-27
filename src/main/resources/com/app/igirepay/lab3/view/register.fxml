@@ -18,7 +18,7 @@
     <Label text="IgirePay" styleClass="brand-title"/>
     <Label text="Create Customer Profile" styleClass="subtitle"/>
 
-    <VBox spacing="8.0" styleClass="card" maxWidth="340.0">
+    <VBox spacing="8.0" styleClass="card auth-card" maxWidth="340.0">
         <Label text="Full Name"/>
         <TextField fx:id="fullNameField" promptText="e.g. Emerance U."/>
 
@@ -35,5 +35,5 @@
         <Button text="Back to Login" onAction="#handleBackToLogin" maxWidth="Infinity" styleClass="btn-secondary"/>
     </VBox>
 
-    <Label fx:id="messageLabel" styleClass="status-error" wrapText="true"/>
+    <Label fx:id="messageLabel" visible="false" managed="false" styleClass="feedback-banner" wrapText="true"/>
 </VBox>

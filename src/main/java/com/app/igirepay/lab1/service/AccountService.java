@@ -222,6 +222,20 @@ public class AccountService {
         return customer.getAccounts();
     }
 
+    public Account getWalletAccountForCustomer(String customerId) {
+        return getAccountsForCustomer(customerId).stream()
+                .filter(WalletAccount.class::isInstance)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public Account getSavingsAccountForCustomer(String customerId) {
+        return getAccountsForCustomer(customerId).stream()
+                .filter(SavingsAccount.class::isInstance)
+                .findFirst()
+                .orElse(null);
+    }
+
     public void loadFromDatabase() {
         customers.clear();
         accounts.clear();

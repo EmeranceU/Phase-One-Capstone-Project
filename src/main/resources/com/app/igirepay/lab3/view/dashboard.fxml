@@ -16,13 +16,19 @@
             styleClass="dashboard-root">
 
     <top>
-        <VBox spacing="4.0" styleClass="top-bar">
+        <VBox spacing="6.0" styleClass="top-bar">
             <padding>
-                <Insets top="16.0" right="20.0" bottom="14.0" left="20.0"/>
+                <Insets top="14.0" right="20.0" bottom="14.0" left="20.0"/>
             </padding>
             <Label text="IgirePay Dashboard" styleClass="header-title"/>
-            <Label fx:id="welcomeLabel" styleClass="subtitle"/>
-            <Label fx:id="messageLabel" styleClass="status-success"/>
+
+            <HBox spacing="18.0" styleClass="welcome-strip">
+                <VBox spacing="1.0" styleClass="welcome-copy" HBox.hgrow="ALWAYS">
+                    <Label fx:id="welcomeLabel" styleClass="welcome-title"/>
+                    <Label fx:id="phoneLabel" styleClass="welcome-subtitle"/>
+                </VBox>
+                <Label fx:id="messageLabel" visible="false" managed="false" styleClass="feedback-banner" wrapText="true" maxWidth="320.0"/>
+            </HBox>
         </VBox>
     </top>
 
@@ -52,7 +58,21 @@
                 <Insets top="16.0" right="18.0" bottom="16.0" left="18.0"/>
             </padding>
 
-            <Label text="Action Inputs" styleClass="section-title"/>
+            <HBox spacing="12.0" alignment="CENTER_LEFT">
+                <VBox spacing="8.0" styleClass="account-card" HBox.hgrow="ALWAYS">
+                    <Label text="Wallet Account" styleClass="account-type"/>
+                    <Label fx:id="walletAccountIdLabel" styleClass="account-id"/>
+                    <Label fx:id="walletBalanceLabel" styleClass="account-balance"/>
+                </VBox>
+
+                <VBox spacing="8.0" styleClass="account-card" HBox.hgrow="ALWAYS">
+                    <Label text="Savings Account" styleClass="account-type"/>
+                    <Label fx:id="savingsAccountIdLabel" styleClass="account-id"/>
+                    <Label fx:id="savingsBalanceLabel" styleClass="account-balance"/>
+                </VBox>
+            </HBox>
+
+            <Label text="Action Inputs" styleClass="section-title section-spacer"/>
 
             <HBox spacing="10.0">
                 <TextField fx:id="initialBalanceField" promptText="Initial balance (for account creation)" HBox.hgrow="ALWAYS"/>
@@ -74,8 +94,8 @@
                 <PasswordField fx:id="newPinField" promptText="New PIN" HBox.hgrow="ALWAYS"/>
             </HBox>
 
-            <Label text="Output" styleClass="section-title"/>
-            <TextArea fx:id="outputArea" prefHeight="420.0" wrapText="true"/>
+            <Label text="Output" styleClass="section-title section-spacer"/>
+            <TextArea fx:id="outputArea" prefHeight="420.0" wrapText="true" styleClass="output-area"/>
         </VBox>
     </center>
 </BorderPane>

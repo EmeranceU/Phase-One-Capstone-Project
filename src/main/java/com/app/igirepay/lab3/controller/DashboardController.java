@@ -24,6 +24,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.stage.Window;
 
 public class DashboardController {
 
@@ -34,6 +37,21 @@ public class DashboardController {
 
     @FXML
     private Label messageLabel;
+
+    @FXML
+    private Label phoneLabel;
+
+    @FXML
+    private Label walletAccountIdLabel;
+
+    @FXML
+    private Label walletBalanceLabel;
+
+    @FXML
+    private Label savingsAccountIdLabel;
+
+    @FXML
+    private Label savingsBalanceLabel;
 
     @FXML
     private TextField initialBalanceField;
@@ -66,12 +84,16 @@ public class DashboardController {
     public void initialize() {
         Customer customer = context.getCurrentCustomer();
         if (customer == null) {
-            welcomeLabel.setText("Welcome");
+            welcomeLabel.setText("Welcome to IgirePay");
+            phoneLabel.setText("Phone: -");
             setMessage("No active login session. Please login again.", true);
+            renderAccountSummary(null);
             return;
         }
 
-        welcomeLabel.setText("Welcome, " + customer.getFullName());
+        welcomeLabel.setText("Welcome back, " + customer.getFullName());
+        phoneLabel.setText("Phone: " + customer.getPhoneNumber());
+        renderAccountSummary(customer);
         showAccounts();
     }
 
@@ -90,14 +112,17 @@ public class DashboardController {
         WalletAccount account = new WalletAccount(context.nextWalletAccountId(), customer.getCustomerId(), initialBalance);
         String result = context.getAccountService().createWalletAccountForCustomer(customer.getCustomerId(), account);
         context.reloadAllFromDatabase();
+        renderAccountSummary(context.getCurrentCustomer());
 
         if (result != null && result.startsWith("Wallet account created")) {
             setMessage(result, false);
+            showPopup(result, AlertType.INFORMATION);
             showAccounts();
             return;
         }
 
         setMessage(result == null ? "Failed to create wallet account." : result, true);
+        showPopup(result == null ? "Failed to create wallet account." : result, AlertType.ERROR);
     }
 
     @FXML
@@ -115,14 +140,17 @@ public class DashboardController {
         SavingsAccount account = new SavingsAccount(context.nextSavingsAccountId(), customer.getCustomerId(), initialBalance);
         String result = context.getAccountService().createSavingsAccountForCustomer(customer.getCustomerId(), account);
         context.reloadAllFromDatabase();
+        renderAccountSummary(context.getCurrentCustomer());
 
         if (result != null && result.startsWith("Savings account created")) {
             setMessage(result, false);
+            showPopup(result, AlertType.INFORMATION);
             showAccounts();
             return;
         }
 
         setMessage(result == null ? "Failed to create savings account." : result, true);
+        showPopup(result == null ? "Failed to create savings account." : result, AlertType.ERROR);
     }
 
     @FXML
@@ -183,16 +211,21 @@ public class DashboardController {
             context.getTransactionService().processTransfer(context.getAccountService(), customer, transaction);
             context.reloadAllFromDatabase();
             setMessage("Transfer completed.", false);
+            showPopup("Transfer completed.", AlertType.INFORMATION);
+            renderAccountSummary(context.getCurrentCustomer());
             showAccounts();
         } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
             setMessage(exception.getMessage(), true);
+            showPopup(exception.getMessage(), AlertType.ERROR);
         }
     }
 
     @FXML
     private void handleCheckBalance() {
+        renderAccountSummary(context.getCurrentCustomer());
         showAccounts();
         setMessage("Balance loaded.", false);
+        showPopup("Balance loaded.", AlertType.INFORMATION);
     }
 
     @FXML
@@ -208,6 +241,7 @@ public class DashboardController {
 
         if (transactions.isEmpty()) {
             outputArea.setText("No transaction history available.");
+            setMessage("No transaction history available.", false);
             return;
         }
 
@@ -232,8 +266,10 @@ public class DashboardController {
 
         if (loan.isApproved()) {
             setMessage("Loan approved.", false);
+            showPopup("Loan approved.", AlertType.INFORMATION);
         } else {
             setMessage(loan.getRepaymentStatus(), true);
+            showPopup(loan.getRepaymentStatus(), AlertType.ERROR);
         }
 
         outputArea.setText(loan.toString());
@@ -252,6 +288,7 @@ public class DashboardController {
 
         if (loans.isEmpty()) {
             outputArea.setText("No loan history available.");
+            setMessage("No loan history available.", false);
             return;
         }
 
@@ -277,10 +314,12 @@ public class DashboardController {
             context.getAuthService().changePin(customer, currentPin, newPin);
             context.reloadAllFromDatabase();
             setMessage("PIN changed successfully.", false);
+            showPopup("PIN changed successfully.", AlertType.INFORMATION);
             currentPinField.clear();
             newPinField.clear();
         } catch (InvalidPinException exception) {
             setMessage(exception.getMessage(), true);
+            showPopup(exception.getMessage(), AlertType.ERROR);
         }
     }
 
@@ -323,9 +362,12 @@ public class DashboardController {
             context.getTransactionService().processTransaction(account, transaction);
             context.reloadAllFromDatabase();
             setMessage(successMessage, false);
+            showPopup(successMessage, AlertType.INFORMATION);
+            renderAccountSummary(context.getCurrentCustomer());
             showAccounts();
         } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
             setMessage(exception.getMessage(), true);
+            showPopup(exception.getMessage(), AlertType.ERROR);
         }
     }
 
@@ -333,6 +375,7 @@ public class DashboardController {
         Customer customer = context.getCurrentCustomer();
         if (customer == null) {
             setMessage("Your session expired. Login again.", true);
+            showPopup("Your session expired. Login again.", AlertType.ERROR);
         }
         return customer;
     }
@@ -368,6 +411,7 @@ public class DashboardController {
         List<Account> accounts = context.getAccountService().getAccountsForCustomer(customer.getCustomerId());
         if (accounts.isEmpty()) {
             outputArea.setText("No accounts yet. Create wallet or savings account.");
+            setMessage("No accounts yet. Create wallet or savings account.", false);
             return;
         }
 
@@ -375,6 +419,25 @@ public class DashboardController {
                 .map(account -> account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + account.getBalance())
                 .collect(Collectors.joining("\n"));
         outputArea.setText(text);
+    }
+
+    private void renderAccountSummary(Customer customer) {
+        if (customer == null) {
+            walletAccountIdLabel.setText("No wallet account");
+            walletBalanceLabel.setText("Balance: -");
+            savingsAccountIdLabel.setText("No savings account");
+            savingsBalanceLabel.setText("Balance: -");
+            return;
+        }
+
+        Account walletAccount = context.getAccountService().getWalletAccountForCustomer(customer.getCustomerId());
+        Account savingsAccount = context.getAccountService().getSavingsAccountForCustomer(customer.getCustomerId());
+
+        walletAccountIdLabel.setText(walletAccount == null ? "No wallet account" : walletAccount.getAccountId());
+        walletBalanceLabel.setText(walletAccount == null ? "Balance: -" : "Balance: " + walletAccount.getBalance());
+
+        savingsAccountIdLabel.setText(savingsAccount == null ? "No savings account" : savingsAccount.getAccountId());
+        savingsBalanceLabel.setText(savingsAccount == null ? "Balance: -" : "Balance: " + savingsAccount.getBalance());
     }
 
     private BigDecimal parseAmount(String raw, String label) {
@@ -403,7 +466,25 @@ public class DashboardController {
 
     private void setMessage(String message, boolean error) {
         messageLabel.setText(message);
-        messageLabel.getStyleClass().removeAll("status-success", "status-error");
-        messageLabel.getStyleClass().add(error ? "status-error" : "status-success");
+        messageLabel.setVisible(true);
+        messageLabel.setManaged(true);
+        messageLabel.getStyleClass().removeAll("status-success", "status-error", "status-info");
+        messageLabel.getStyleClass().add(error ? "status-error" : "status-info");
+    }
+
+    private void showPopup(String message, AlertType alertType) {
+        if (message == null || message.isBlank()) {
+            return;
+        }
+
+        Alert alert = new Alert(alertType);
+        alert.setTitle("IgirePay");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        Window owner = messageLabel.getScene() == null ? null : messageLabel.getScene().getWindow();
+        if (owner != null) {
+            alert.initOwner(owner);
+        }
+        alert.showAndWait();
     }
 }
