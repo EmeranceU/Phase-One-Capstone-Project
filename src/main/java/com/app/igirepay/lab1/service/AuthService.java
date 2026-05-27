@@ -1,11 +1,11 @@
 package com.app.igirepay.lab1.service;
 
+import java.util.Objects;
+
 import com.app.igirepay.lab1.exception.InvalidPinException;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.util.FileHandler;
 import com.app.igirepay.lab2.dao.CustomerDAO;
-
-import java.util.Objects;
 
 public class AuthService {
 
