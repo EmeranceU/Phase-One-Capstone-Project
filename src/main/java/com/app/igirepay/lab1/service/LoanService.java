@@ -4,6 +4,7 @@ import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.model.Loan;
 import com.app.igirepay.lab1.model.SavingsAccount;
 import com.app.igirepay.lab1.util.FileHandler;
+import com.app.igirepay.lab2.dao.LoanDAO;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,18 +25,28 @@ public class LoanService {
 	private final AccountService accountService;
 	private final TransactionService transactionService;
 	private final FileHandler fileHandler;
+	private final LoanDAO loanDAO;
 	private final List<Loan> loanHistory = new ArrayList<>();
 	private final List<String> failedLoanLogs = new ArrayList<>();
 	private int nextLoanId = 1;
 
 	public LoanService(AccountService accountService, TransactionService transactionService) {
-		this(accountService, transactionService, new FileHandler());
+		this(accountService, transactionService, new FileHandler(), null);
 	}
 
 	public LoanService(AccountService accountService, TransactionService transactionService, FileHandler fileHandler) {
+		this(accountService, transactionService, fileHandler, null);
+	}
+
+	/**
+	 * Primary constructor allowing optional LoanDAO for JDBC-backed persistence.
+	 * If loanDAO is null, file-based persistence (FileHandler) is used as fallback.
+	 */
+	public LoanService(AccountService accountService, TransactionService transactionService, FileHandler fileHandler, LoanDAO loanDAO) {
 		this.accountService = accountService;
 		this.transactionService = transactionService;
 		this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
+		this.loanDAO = loanDAO;
 	}
 
 	public Loan requestLoan(Customer customer, BigDecimal amount) {
@@ -110,20 +121,24 @@ public class LoanService {
 	}
 
 	private Loan createLoan(Customer customer, BigDecimal amount) {
-		return new Loan(String.valueOf(nextLoanId++),
+		Loan loan = new Loan(String.valueOf(nextLoanId++),
 				customer == null ? null : customer.getCustomerId(),
 				amount,
 				DEFAULT_INTEREST_RATE,
 				false,
 				"PENDING",
 				LocalDateTime.now());
+		if (customer != null && customer.getDatabaseId() != null) {
+			loan.setCustomerDatabaseId(customer.getDatabaseId());
+		}
+		return loan;
 	}
 
 	private void approveLoan(Loan loan) {
 		loan.setApproved(true);
 		loan.setRepaymentStatus("APPROVED");
 		loanHistory.add(loan);
-		fileHandler.saveLoan(loan);
+		persistLoan(loan);
 	}
 
 	private void rejectLoan(Loan loan, String reason) {
@@ -132,8 +147,54 @@ public class LoanService {
 		loanHistory.add(loan);
 		String logEntry = loan.getLoanId() + " - " + reason;
 		failedLoanLogs.add(logEntry);
+		// persist failed log to file for now (no DB table for failed logs)
 		fileHandler.saveFailedLoan(logEntry);
-		fileHandler.saveLoan(loan);
+		persistLoan(loan);
+	}
+
+	private void persistLoan(Loan loan) {
+		if (loan == null) return;
+		if (loanDAO != null) {
+			// Ensure customerDatabaseId is set when possible
+			if (loan.getCustomerDatabaseId() == null) {
+				try {
+					if (loan.getCustomerId() != null) {
+						loan.setCustomerDatabaseId(Integer.parseInt(loan.getCustomerId()));
+					}
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			loanDAO.save(loan);
+		} else {
+			fileHandler.saveLoan(loan);
+		}
+	}
+
+	/**
+	 * Load all loans from the configured persistence. If a LoanDAO is present, load from database,
+	 * otherwise rely on in-memory/file-based loans already loaded.
+	 */
+	public void loadLoansFromPersistence() {
+		if (loanDAO != null) {
+			List<Loan> loans = loanDAO.findAll();
+			for (Loan l : loans) {
+				loadLoan(l);
+			}
+		}
+	}
+
+	/**
+	 * Retrieve loan history for a given customer database id. If DAO is configured, query DB directly.
+	 */
+	public List<Loan> getLoanHistoryForCustomerDatabaseId(Integer customerDatabaseId) {
+		if (customerDatabaseId == null) return List.of();
+		if (loanDAO != null) {
+			return loanDAO.findByCustomerDatabaseId(customerDatabaseId);
+		}
+
+		return loanHistory.stream()
+				.filter(loan -> customerDatabaseId.equals(loan.getCustomerDatabaseId()))
+				.collect(Collectors.toList());
 	}
 
 	private String buildRejectionReason(boolean hasMinimumSavings,

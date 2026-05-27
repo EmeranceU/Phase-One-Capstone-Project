@@ -25,6 +25,7 @@ import com.app.igirepay.lab2.dao.TransactionDAO;
 import com.app.igirepay.lab2.dao.impl.AccountDAOImpl;
 import com.app.igirepay.lab2.dao.impl.CustomerDAOImpl;
 import com.app.igirepay.lab2.dao.impl.TransactionDAOImpl;
+import com.app.igirepay.lab2.dao.impl.LoanDAOImpl;
 
 public class Main {
 
@@ -45,10 +46,13 @@ public class Main {
         AccountService accountService = new AccountService(fileHandler, customerDAO, accountDAO);
         TransactionService transactionService = new TransactionService(fileHandler, transactionDAO, accountDAO);
         AuthService authService = new AuthService(accountService, fileHandler, customerDAO);
-        LoanService loanService = new LoanService(accountService, transactionService, fileHandler);
+        // Provide LoanDAOImpl so LoanService can persist loans into PostgreSQL (gradual migration)
+        LoanService loanService = new LoanService(accountService, transactionService, fileHandler, new LoanDAOImpl());
 
-        // Load persisted data into memory before showing menus
+        // Load persisted data into memory before showing menus (file-based)
         fileHandler.loadAllData(accountService, transactionService, loanService);
+        // Then load any loans persisted in the database (if present)
+        loanService.loadLoansFromPersistence();
         syncNextIds(accountService, transactionService);
         Customer loggedInCustomer = null;
 
@@ -388,7 +392,12 @@ public class Main {
     }
 
     private static void viewLoanHistory(LoanService loanService, Customer loggedInCustomer) {
-        List<Loan> loans = loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId());
+        List<Loan> loans;
+        if (loggedInCustomer.getDatabaseId() != null) {
+            loans = loanService.getLoanHistoryForCustomerDatabaseId(loggedInCustomer.getDatabaseId());
+        } else {
+            loans = loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId());
+        }
         if (loans.isEmpty()) {
             System.out.println("No loan history available.");
             return;
