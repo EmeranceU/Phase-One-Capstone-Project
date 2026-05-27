@@ -3,6 +3,7 @@ package com.app.igirepay.lab1.service;
 import java.math.BigDecimal;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -244,6 +245,66 @@ public class TransactionService {
         }
 
         return exportPath;
+    }
+
+    public DailyTransactionSummary getDailyTransactionSummary(Customer customer, AccountService accountService) {
+        if (customer == null) {
+            throw new IllegalArgumentException("customer must not be null");
+        }
+
+        List<Transaction> transactions = customer.getDatabaseId() != null
+                ? getTransactionHistoryForCustomerFromDB(customer.getDatabaseId())
+                : getTransactionHistoryForCustomer(customer.getCustomerId());
+
+        List<Account> customerAccounts = accountService == null || customer.getCustomerId() == null
+                ? List.of()
+                : accountService.getAccountsForCustomer(customer.getCustomerId());
+        Set<Integer> customerAccountIds = customerAccounts.stream()
+                .map(Account::getDatabaseId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        LocalDate today = LocalDate.now();
+        int deposits = 0;
+        int withdrawals = 0;
+        int transfers = 0;
+        BigDecimal moneyIn = BigDecimal.ZERO;
+        BigDecimal moneyOut = BigDecimal.ZERO;
+
+        for (Transaction transaction : transactions) {
+            if (transaction == null || transaction.getTimestamp() == null || !today.equals(transaction.getTimestamp().toLocalDate())) {
+                continue;
+            }
+
+            String transactionType = transaction.getTransactionType() == null ? "" : transaction.getTransactionType().trim().toUpperCase();
+            BigDecimal amount = transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount();
+
+            if ("DEPOSIT".equals(transactionType)) {
+                deposits++;
+                moneyIn = moneyIn.add(amount);
+                continue;
+            }
+
+            if ("WITHDRAWAL".equals(transactionType)) {
+                withdrawals++;
+                moneyOut = moneyOut.add(amount);
+                continue;
+            }
+
+            if ("TRANSFER".equals(transactionType)) {
+                transfers++;
+
+                if (customerAccountIds.contains(transaction.getDestinationAccountDatabaseId())) {
+                    moneyIn = moneyIn.add(amount);
+                }
+
+                if (customerAccountIds.contains(transaction.getAccountDatabaseId())) {
+                    moneyOut = moneyOut.add(amount);
+                }
+            }
+        }
+
+        return new DailyTransactionSummary(deposits, withdrawals, transfers, moneyIn, moneyOut);
     }
 
     private String csvValue(String value) {
