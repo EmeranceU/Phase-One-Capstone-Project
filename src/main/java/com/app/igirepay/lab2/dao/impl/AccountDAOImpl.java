@@ -169,12 +169,16 @@ public class AccountDAOImpl implements AccountDAO {
     private Account mapAccount(ResultSet resultSet) throws SQLException {
         int databaseId = resultSet.getInt("id");
         int customerDatabaseId = resultSet.getInt("customer_id");
+        String accountType = resultSet.getString("account_type");
+        java.math.BigDecimal balance = resultSet.getBigDecimal("balance");
 
-        WalletAccount account = new WalletAccount(
-                String.valueOf(databaseId),
-                String.valueOf(customerDatabaseId),
-                resultSet.getBigDecimal("balance")
-        );
+        Account account;
+        if ("SAVINGS".equalsIgnoreCase(accountType)) {
+            account = new SavingsAccount(String.valueOf(databaseId), String.valueOf(customerDatabaseId), balance);
+        } else {
+            account = new WalletAccount(String.valueOf(databaseId), String.valueOf(customerDatabaseId), balance);
+        }
+
         account.setDatabaseId(databaseId);
         account.setCustomerDatabaseId(customerDatabaseId);
         return account;
