@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane prefWidth="1040.0" prefHeight="700.0"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.app.igirepay.lab3.controller.DashboardController"
+            styleClass="dashboard-root">
+
+    <top>
+        <VBox spacing="4.0" styleClass="top-bar">
+            <padding>
+                <Insets top="16.0" right="20.0" bottom="14.0" left="20.0"/>
+            </padding>
+            <Label text="IgirePay Dashboard" styleClass="header-title"/>
+            <Label fx:id="welcomeLabel" styleClass="subtitle"/>
+            <Label fx:id="messageLabel" styleClass="status-success"/>
+        </VBox>
+    </top>
+
+    <left>
+        <VBox spacing="10.0" styleClass="nav-panel" prefWidth="250.0">
+            <padding>
+                <Insets top="16.0" right="14.0" bottom="16.0" left="14.0"/>
+            </padding>
+
+            <Button text="Create Wallet Account" onAction="#handleCreateWalletAccount" styleClass="btn-primary" maxWidth="Infinity"/>
+            <Button text="Create Savings Account" onAction="#handleCreateSavingsAccount" styleClass="btn-primary" maxWidth="Infinity"/>
+            <Button text="Deposit Money" onAction="#handleDepositMoney" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Withdraw Money" onAction="#handleWithdrawMoney" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Transfer Money" onAction="#handleTransferMoney" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Check Balance" onAction="#handleCheckBalance" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Transaction History" onAction="#handleTransactionHistory" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Request Loan" onAction="#handleRequestLoan" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="View Loan History" onAction="#handleViewLoanHistory" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Change PIN" onAction="#handleChangePin" styleClass="btn-secondary" maxWidth="Infinity"/>
+            <Button text="Logout" onAction="#handleLogout" styleClass="btn-danger" maxWidth="Infinity"/>
+        </VBox>
+    </left>
+
+    <center>
+        <VBox spacing="12.0" styleClass="content-panel">
+            <padding>
+                <Insets top="16.0" right="18.0" bottom="16.0" left="18.0"/>
+            </padding>
+
+            <Label text="Action Inputs" styleClass="section-title"/>
+
+            <HBox spacing="10.0">
+                <TextField fx:id="initialBalanceField" promptText="Initial balance (for account creation)" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="loanAmountField" promptText="Loan amount" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="10.0">
+                <TextField fx:id="accountIdField" promptText="Your account ID (WAL-x / SAV-x)" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="amountField" promptText="Amount (deposit/withdraw/transfer)" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="10.0">
+                <TextField fx:id="recipientPhoneField" promptText="Recipient phone (for transfer)" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="referenceField" promptText="Reference ID" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="10.0">
+                <PasswordField fx:id="currentPinField" promptText="Current PIN" HBox.hgrow="ALWAYS"/>
+                <PasswordField fx:id="newPinField" promptText="New PIN" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <Label text="Output" styleClass="section-title"/>
+            <TextArea fx:id="outputArea" prefHeight="420.0" wrapText="true"/>
+        </VBox>
+    </center>
+</BorderPane>
