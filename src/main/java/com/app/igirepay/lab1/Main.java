@@ -63,7 +63,7 @@ public class Main {
                     continue;
                 }
 
-                loggedInCustomer = handleAuthenticatedMenu(scanner, loggedInCustomer, accountService, transactionService, authService, loanService);
+                loggedInCustomer = handleAuthenticatedMenu(scanner, loggedInCustomer, accountService, customerDAO, transactionService, authService, loanService);
             }
         }
     }
@@ -89,6 +89,7 @@ public class Main {
     private static Customer handleAuthenticatedMenu(Scanner scanner,
                                                     Customer loggedInCustomer,
                                                     AccountService accountService,
+                                                    CustomerDAO customerDAO,
                                                     TransactionService transactionService,
                                                     AuthService authService,
                                                     LoanService loanService) {
@@ -107,13 +108,13 @@ public class Main {
                 withdrawMoney(scanner, accountService, transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 5:
-                transferMoney(scanner, accountService, transactionService, loggedInCustomer);
+                transferMoney(scanner, accountService, customerDAO, transactionService, loggedInCustomer);
                 return loggedInCustomer;
             case 6:
-                checkAccountBalance(loggedInCustomer);
+                checkAccountBalance(accountService, loggedInCustomer);
                 return loggedInCustomer;
             case 7:
-                viewMyAccounts(loggedInCustomer);
+                viewMyAccounts(accountService, loggedInCustomer);
                 return loggedInCustomer;
             case 8:
                 viewTransactionHistory(transactionService, loggedInCustomer);
@@ -236,14 +237,13 @@ public class Main {
     }
 
     private static Customer changePin(Scanner scanner, AuthService authService, Customer loggedInCustomer) {
-        String phoneNumber = readText(scanner, "Phone number: ");
         String currentPin = readText(scanner, "Current PIN: ");
         String newPin = readText(scanner, "New PIN: ");
 
         try {
-            authService.changePin(phoneNumber, currentPin, newPin);
+            authService.changePin(loggedInCustomer, currentPin, newPin);
             System.out.println("PIN changed successfully.");
-            return authService.login(phoneNumber, newPin);
+            return loggedInCustomer;
         } catch (InvalidPinException exception) {
             System.out.println("PIN change failed: " + exception.getMessage());
             return loggedInCustomer;
@@ -320,6 +320,7 @@ public class Main {
 
     private static void transferMoney(Scanner scanner,
                                       AccountService accountService,
+                                      CustomerDAO customerDAO,
                                       TransactionService transactionService,
                                       Customer loggedInCustomer) {
         Account sourceAccount = selectCustomerAccount(scanner, accountService, loggedInCustomer);
@@ -328,12 +329,29 @@ public class Main {
         }
 
         BigDecimal amount = readAmount(scanner, "Transfer amount: ");
-        String destinationAccountId = readText(scanner, "Destination Account ID: ");
+        String destinationPhoneNumber = readText(scanner, "Recipient phone number: ");
         String referenceId = readText(scanner, "Reference ID: ");
+
+        Customer recipient = null;
+        if (customerDAO != null) {
+            recipient = customerDAO.findByPhone(destinationPhoneNumber);
+        }
+
+        if (recipient == null) {
+            System.out.println("Transfer failed: recipient not found.");
+            return;
+        }
+
+        Account destinationAccount = findRecipientWalletAccount(accountService, recipient);
+        if (destinationAccount == null) {
+            System.out.println("Transfer failed: recipient has no wallet account.");
+            return;
+        }
+
         Transaction transaction = new Transaction(String.valueOf(nextTransactionId++),
                 loggedInCustomer.getCustomerId(),
                 sourceAccount.getAccountId(),
-                destinationAccountId,
+                destinationAccount.getAccountId(),
                 referenceId,
                 amount,
                 "TRANSFER",
@@ -341,31 +359,32 @@ public class Main {
 
         try {
             transactionService.processTransfer(accountService, loggedInCustomer, transaction);
-            Account destinationAccount = accountService.findAccountById(destinationAccountId);
-            System.out.println("Transfer successful: " + sourceAccount.getAccountId() + " -> " + destinationAccountId + " | Source balance: " + sourceAccount.getBalance() + " | Destination balance: " + destinationAccount.getBalance());
+            System.out.println("Transfer successful: " + sourceAccount.getAccountId() + " -> " + destinationAccount.getAccountId() + " | Source balance: " + sourceAccount.getBalance() + " | Destination balance: " + destinationAccount.getBalance());
         } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
             System.out.println("Transfer failed: " + exception.getMessage());
         }
     }
 
-    private static void viewMyAccounts(Customer loggedInCustomer) {
-        if (loggedInCustomer.getAccounts().isEmpty()) {
+    private static void viewMyAccounts(AccountService accountService, Customer loggedInCustomer) {
+        List<Account> accounts = getFreshCustomerAccounts(accountService, loggedInCustomer);
+        if (accounts.isEmpty()) {
             System.out.println("No accounts found. Please create an account first.");
             return;
         }
 
-        loggedInCustomer.getAccounts().forEach(account ->
+        accounts.forEach(account ->
                 System.out.println(account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + account.getBalance()));
     }
 
-    private static void checkAccountBalance(Customer loggedInCustomer) {
-        if (loggedInCustomer.getAccounts().isEmpty()) {
+    private static void checkAccountBalance(AccountService accountService, Customer loggedInCustomer) {
+        List<Account> accounts = getFreshCustomerAccounts(accountService, loggedInCustomer);
+        if (accounts.isEmpty()) {
             System.out.println("No accounts found. Please create an account first.");
             return;
         }
 
         System.out.println("Account balances:");
-        loggedInCustomer.getAccounts().forEach(account ->
+        accounts.forEach(account ->
                 System.out.println(account.getClass().getSimpleName() + " | "
                         + account.getAccountId() + " | Balance: " + account.getBalance()));
     }
@@ -408,7 +427,7 @@ public class Main {
     }
 
     private static Account selectCustomerAccount(Scanner scanner, AccountService accountService, Customer loggedInCustomer) {
-        List<Account> accounts = accountService.getAccountsForCustomer(loggedInCustomer.getCustomerId());
+        List<Account> accounts = getFreshCustomerAccounts(accountService, loggedInCustomer);
         if (accounts.isEmpty()) {
             System.out.println("No accounts found for this customer.");
             return null;
@@ -426,6 +445,25 @@ public class Main {
 
         System.out.println("Account not found.");
         return null;
+    }
+
+    private static Account findRecipientWalletAccount(AccountService accountService, Customer recipient) {
+        List<Account> recipientAccounts = getFreshCustomerAccounts(accountService, recipient);
+        for (Account account : recipientAccounts) {
+            if (account instanceof WalletAccount) {
+                return account;
+            }
+        }
+
+        return null;
+    }
+
+    private static List<Account> getFreshCustomerAccounts(AccountService accountService, Customer customer) {
+        if (accountService == null || customer == null) {
+            return List.of();
+        }
+
+        return accountService.getAccountsForCustomer(customer.getCustomerId());
     }
 
     private static void processAndReport(TransactionService transactionService,

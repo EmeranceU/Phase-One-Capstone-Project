@@ -132,7 +132,25 @@ public class AccountService {
             return null;
         }
 
-        return accounts.get(accountId);
+        Account account = accounts.get(accountId);
+        if (account != null || accountDAO == null) {
+            return account;
+        }
+
+        try {
+            Account databaseAccount = accountDAO.findByBusinessAccountId(accountId);
+            if (databaseAccount != null) {
+                accounts.put(databaseAccount.getAccountId(), databaseAccount);
+                Customer owner = customers.get(databaseAccount.getCustomerId());
+                if (owner != null && owner.findAccountById(databaseAccount.getAccountId()) == null) {
+                    owner.addAccount(databaseAccount);
+                }
+            }
+            return databaseAccount;
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to look up account in PostgreSQL: " + exception.getMessage());
+            return null;
+        }
     }
 
     public List<Customer> getCustomers() {

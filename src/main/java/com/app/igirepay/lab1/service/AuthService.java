@@ -46,16 +46,32 @@ public class AuthService {
 
 	public boolean changePin(String phoneNumber, String currentPin, String newPin) throws InvalidPinException {
 		Customer customer = login(phoneNumber, currentPin);
+		return changePin(customer, currentPin, newPin);
+	}
+
+	public boolean changePin(Customer customer, String currentPin, String newPin) throws InvalidPinException {
+		if (!isPinValid(customer, currentPin)) {
+			throw new InvalidPinException("Invalid current PIN.");
+		}
+
 		if (newPin == null || newPin.trim().isEmpty()) {
 			throw new InvalidPinException("New PIN must not be blank.");
 		}
 
-		customer.setPin(newPin.trim());
+		String normalizedPin = newPin.trim();
+		customer.setPin(normalizedPin);
 		fileHandler.saveCustomer(customer);
 		
 		if (customerDAO != null) {
 			try {
-				customerDAO.update(customer);
+				Customer persistedCustomer = customerDAO.findByPhone(customer.getPhoneNumber());
+				if (persistedCustomer == null) {
+					persistedCustomer = customer;
+				} else {
+					persistedCustomer.setPin(normalizedPin);
+				}
+				persistedCustomer.setPin(normalizedPin);
+				customerDAO.update(persistedCustomer);
 			} catch (Exception exception) {
 				System.err.println("Warning: Failed to update PIN in PostgreSQL: " + exception.getMessage());
 			}
