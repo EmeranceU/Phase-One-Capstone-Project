@@ -35,24 +35,18 @@ public class Main {
     private static int nextTransactionId = 1;
 
     public static void main(String[] args) {
-        // use a shared FileHandler so reads/writes target the same files
-        com.app.igirepay.lab1.util.FileHandler fileHandler = new com.app.igirepay.lab1.util.FileHandler();
-        
-        // Create DAOs for PostgreSQL integration
         CustomerDAO customerDAO = new CustomerDAOImpl();
         AccountDAO accountDAO = new AccountDAOImpl();
         TransactionDAO transactionDAO = new TransactionDAOImpl();
         
-        AccountService accountService = new AccountService(fileHandler, customerDAO, accountDAO);
-        TransactionService transactionService = new TransactionService(fileHandler, transactionDAO, accountDAO);
-        AuthService authService = new AuthService(accountService, fileHandler, customerDAO);
-        // Provide LoanDAOImpl so LoanService can persist loans into PostgreSQL (gradual migration)
-        LoanService loanService = new LoanService(accountService, transactionService, fileHandler, new LoanDAOImpl());
+        AccountService accountService = new AccountService(customerDAO, accountDAO);
+        TransactionService transactionService = new TransactionService(transactionDAO, accountDAO);
+        AuthService authService = new AuthService(customerDAO);
+        LoanService loanService = new LoanService(accountService, transactionService, new LoanDAOImpl());
 
-        // Load persisted data into memory before showing menus (file-based)
-        fileHandler.loadAllData(accountService, transactionService, loanService);
-        // Then load any loans persisted in the database (if present)
-        loanService.loadLoansFromPersistence();
+        accountService.loadFromDatabase();
+        transactionService.loadFromDatabase();
+        loanService.loadFromDatabase();
         syncNextIds(accountService, transactionService);
         Customer loggedInCustomer = null;
 
@@ -390,7 +384,9 @@ public class Main {
     }
 
     private static void viewTransactionHistory(TransactionService transactionService, Customer loggedInCustomer) {
-        List<Transaction> transactions = transactionService.getTransactionHistoryForCustomer(loggedInCustomer.getCustomerId());
+        List<Transaction> transactions = loggedInCustomer.getDatabaseId() != null
+                ? transactionService.getTransactionHistoryForCustomerFromDB(loggedInCustomer.getDatabaseId())
+                : transactionService.getTransactionHistoryForCustomer(loggedInCustomer.getCustomerId());
         if (transactions.isEmpty()) {
             System.out.println("No transaction history available.");
             return;
@@ -411,12 +407,9 @@ public class Main {
     }
 
     private static void viewLoanHistory(LoanService loanService, Customer loggedInCustomer) {
-        List<Loan> loans;
-        if (loggedInCustomer.getDatabaseId() != null) {
-            loans = loanService.getLoanHistoryForCustomerDatabaseId(loggedInCustomer.getDatabaseId());
-        } else {
-            loans = loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId());
-        }
+        List<Loan> loans = loggedInCustomer.getDatabaseId() != null
+                ? loanService.getLoanHistoryForCustomerDatabaseId(loggedInCustomer.getDatabaseId())
+                : loanService.getLoanHistoryForCustomer(loggedInCustomer.getCustomerId());
         if (loans.isEmpty()) {
             System.out.println("No loan history available.");
             return;

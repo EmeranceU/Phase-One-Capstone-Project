@@ -1,39 +1,32 @@
 package com.app.igirepay.lab1.service;
 
+import com.app.igirepay.lab1.model.Account;
+import com.app.igirepay.lab1.model.Customer;
+import com.app.igirepay.lab2.dao.AccountDAO;
+import com.app.igirepay.lab2.dao.CustomerDAO;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.app.igirepay.lab1.model.Account;
-import com.app.igirepay.lab1.model.Customer;
-import com.app.igirepay.lab1.util.FileHandler;
-import com.app.igirepay.lab2.dao.AccountDAO;
-import com.app.igirepay.lab2.dao.CustomerDAO;
-
 public class AccountService {
 
     private final Map<String, Customer> customers = new LinkedHashMap<>();
     private final Map<String, Account> accounts = new LinkedHashMap<>();
-    private final FileHandler fileHandler;
     private final CustomerDAO customerDAO;
     private final AccountDAO accountDAO;
 
     public AccountService() {
-        this(new FileHandler(), null, null);
+        this(null, null);
     }
 
-    public AccountService(FileHandler fileHandler) {
-        this(fileHandler, null, null);
+    public AccountService(CustomerDAO customerDAO) {
+        this(customerDAO, null);
     }
 
-    public AccountService(FileHandler fileHandler, CustomerDAO customerDAO) {
-        this(fileHandler, customerDAO, null);
-    }
-
-    public AccountService(FileHandler fileHandler, CustomerDAO customerDAO, AccountDAO accountDAO) {
-        this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
+    public AccountService(CustomerDAO customerDAO, AccountDAO accountDAO) {
         this.customerDAO = customerDAO;
         this.accountDAO = accountDAO;
     }
@@ -44,8 +37,7 @@ public class AccountService {
         }
 
         customers.put(customer.getCustomerId(), customer);
-        fileHandler.saveCustomer(customer);
-        
+
         if (customerDAO != null) {
             try {
                 customerDAO.save(customer);
@@ -53,17 +45,7 @@ public class AccountService {
                 System.err.println("Warning: Failed to persist customer to PostgreSQL: " + exception.getMessage());
             }
         }
-        
-        return true;
-    }
 
-    // Add customer during startup load without persisting back to file
-    public boolean addCustomerFromFile(Customer customer) {
-        if (customer == null || customer.getCustomerId() == null || customers.containsKey(customer.getCustomerId())) {
-            return false;
-        }
-
-        customers.put(customer.getCustomerId(), customer);
         return true;
     }
 
@@ -72,7 +54,21 @@ public class AccountService {
             return null;
         }
 
-        return customers.get(customerId);
+        Customer customer = customers.get(customerId);
+        if (customer != null || customerDAO == null) {
+            return customer;
+        }
+
+        try {
+            Customer databaseCustomer = customerDAO.findById(parseId(customerId));
+            if (databaseCustomer != null) {
+                customers.put(databaseCustomer.getCustomerId(), databaseCustomer);
+            }
+            return databaseCustomer;
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to look up customer in PostgreSQL: " + exception.getMessage());
+            return null;
+        }
     }
 
     public boolean addAccount(Account account) {
@@ -81,8 +77,7 @@ public class AccountService {
         }
 
         accounts.put(account.getAccountId(), account);
-        fileHandler.saveAccount(account);
-        
+
         if (accountDAO != null) {
             try {
                 accountDAO.save(account);
@@ -90,21 +85,7 @@ public class AccountService {
                 System.err.println("Warning: Failed to persist account to PostgreSQL: " + exception.getMessage());
             }
         }
-        
-        return true;
-    }
 
-    // Add account during startup load without persisting back to file; attach to customer if present
-    public boolean addAccountFromFile(Account account) {
-        if (account == null || account.getAccountId() == null || accounts.containsKey(account.getAccountId())) {
-            return false;
-        }
-
-        accounts.put(account.getAccountId(), account);
-        Customer owner = customers.get(account.getCustomerId());
-        if (owner != null) {
-            owner.addAccount(account);
-        }
         return true;
     }
 
@@ -114,11 +95,10 @@ public class AccountService {
             return false;
         }
 
-        // Set customer database ID for JDBC persistence if available
         if (customer.getDatabaseId() != null) {
             account.setCustomerDatabaseId(customer.getDatabaseId());
         }
-        
+
         if (!addAccount(account)) {
             return false;
         }
@@ -167,7 +147,6 @@ public class AccountService {
             return List.of();
         }
 
-        // If customer has database ID and accountDAO is available, load from PostgreSQL
         if (customer.getDatabaseId() != null && accountDAO != null) {
             try {
                 return accountDAO.findByCustomerDatabaseId(customer.getDatabaseId());
@@ -175,9 +154,37 @@ public class AccountService {
                 System.err.println("Warning: Failed to load accounts from PostgreSQL: " + exception.getMessage());
             }
         }
-        
-        // Fall back to in-memory accounts
+
         return customer.getAccounts();
+    }
+
+    public void loadFromDatabase() {
+        customers.clear();
+        accounts.clear();
+
+        if (customerDAO != null) {
+            for (Customer customer : customerDAO.findAll()) {
+                customers.put(customer.getCustomerId(), customer);
+            }
+        }
+
+        if (accountDAO != null) {
+            for (Account account : accountDAO.findAll()) {
+                accounts.put(account.getAccountId(), account);
+                Customer owner = customers.get(account.getCustomerId());
+                if (owner != null && owner.findAccountById(account.getAccountId()) == null) {
+                    owner.addAccount(account);
+                }
+            }
+        }
+    }
+
+    private int parseId(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Customer id must be numeric for PostgreSQL lookup", exception);
+        }
     }
 
     public boolean removeAccount(String accountId) {

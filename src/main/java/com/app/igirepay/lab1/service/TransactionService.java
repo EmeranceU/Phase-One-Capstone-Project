@@ -6,7 +6,6 @@ import com.app.igirepay.lab1.exception.InvalidAmountException;
 import com.app.igirepay.lab1.model.Account;
 import com.app.igirepay.lab1.model.Customer;
 import com.app.igirepay.lab1.model.Transaction;
-import com.app.igirepay.lab1.util.FileHandler;
 import com.app.igirepay.lab2.dao.AccountDAO;
 import com.app.igirepay.lab2.dao.TransactionDAO;
 
@@ -23,24 +22,18 @@ public class TransactionService {
     private final Set<String> processedReferenceIds = new HashSet<>();
     private final List<Transaction> transactionHistory = new ArrayList<>();
     private final List<String> failedTransactionLogs = new ArrayList<>();
-    private final FileHandler fileHandler;
     private final TransactionDAO transactionDAO;
     private final AccountDAO accountDAO;
 
     public TransactionService() {
-        this(new FileHandler(), null, null);
+        this(null, null);
     }
 
-    public TransactionService(FileHandler fileHandler) {
-        this(fileHandler, null, null);
+    public TransactionService(TransactionDAO transactionDAO) {
+        this(transactionDAO, null);
     }
 
-    public TransactionService(FileHandler fileHandler, TransactionDAO transactionDAO) {
-        this(fileHandler, transactionDAO, null);
-    }
-
-    public TransactionService(FileHandler fileHandler, TransactionDAO transactionDAO, AccountDAO accountDAO) {
-        this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
+    public TransactionService(TransactionDAO transactionDAO, AccountDAO accountDAO) {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
     }
@@ -176,7 +169,7 @@ public class TransactionService {
         if (customerDatabaseId == null || transactionDAO == null) {
             return List.of();
         }
-        
+
         try {
             return transactionDAO.findByCustomerDatabaseId(customerDatabaseId);
         } catch (Exception exception) {
@@ -189,12 +182,10 @@ public class TransactionService {
         if (accountDatabaseId == null || transactionDAO == null) {
             return List.of();
         }
-        
+
         try {
             List<Transaction> transactions = new ArrayList<>();
-            // Get transactions where this account is the source
             transactions.addAll(transactionDAO.findBySourceAccountDatabaseId(accountDatabaseId));
-            // Get transactions where this account is the destination
             transactions.addAll(transactionDAO.findByDestinationAccountDatabaseId(accountDatabaseId));
             return transactions;
         } catch (Exception exception) {
@@ -203,9 +194,23 @@ public class TransactionService {
         }
     }
 
-    // Load a transaction from file into memory without writing back to disk
+    public void loadFromDatabase() {
+        if (transactionDAO == null) {
+            return;
+        }
+
+        transactionHistory.clear();
+        processedReferenceIds.clear();
+        for (Transaction transaction : transactionDAO.findAll()) {
+            loadTransaction(transaction);
+        }
+    }
+
     public void loadTransaction(Transaction transaction) {
-        if (transaction == null) return;
+        if (transaction == null) {
+            return;
+        }
+
         if (transaction.getReferenceId() != null && !transaction.getReferenceId().isBlank()) {
             processedReferenceIds.add(transaction.getReferenceId());
         }
@@ -287,30 +292,23 @@ public class TransactionService {
     private void recordSuccess(Transaction transaction, Account account, Account destinationAccount) {
         processedReferenceIds.add(transaction.getReferenceId());
         transactionHistory.add(transaction);
-        fileHandler.saveTransactionHistory(transaction);
-        
-        // Persist transaction and account updates to PostgreSQL
+
         if (transactionDAO != null && account != null) {
             try {
-                // Set customer database ID from account
                 if (account.getCustomerDatabaseId() != null) {
                     transaction.setCustomerDatabaseId(account.getCustomerDatabaseId());
                 }
-                
-                // Set account database ID on transaction for JDBC persistence
+
                 if (account.getDatabaseId() != null) {
                     transaction.setAccountDatabaseId(account.getDatabaseId());
                 }
-                
-                // Set destination account database ID for transfers
+
                 if (destinationAccount != null && destinationAccount.getDatabaseId() != null) {
                     transaction.setDestinationAccountDatabaseId(destinationAccount.getDatabaseId());
                 }
-                
-                // Persist transaction
+
                 transactionDAO.save(transaction);
-                
-                // Persist account balance updates
+
                 if (accountDAO != null) {
                     accountDAO.update(account);
                     if (destinationAccount != null) {
@@ -327,6 +325,5 @@ public class TransactionService {
         String referenceId = transaction == null ? "UNKNOWN" : transaction.getReferenceId();
         String logEntry = referenceId + " - " + message;
         failedTransactionLogs.add(logEntry);
-        fileHandler.saveFailedTransactionLogs(logEntry);
     }
 }

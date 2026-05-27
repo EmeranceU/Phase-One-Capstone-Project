@@ -1,104 +1,76 @@
 package com.app.igirepay.lab1.service;
 
-import java.util.Objects;
-
 import com.app.igirepay.lab1.exception.InvalidPinException;
 import com.app.igirepay.lab1.model.Customer;
-import com.app.igirepay.lab1.util.FileHandler;
 import com.app.igirepay.lab2.dao.CustomerDAO;
+
+import java.util.Objects;
 
 public class AuthService {
 
-	private final AccountService accountService;
-	private final FileHandler fileHandler;
-	private final CustomerDAO customerDAO;
+    private final CustomerDAO customerDAO;
 
-	public AuthService(AccountService accountService) {
-		this(accountService, new FileHandler(), null);
-	}
+    public AuthService(CustomerDAO customerDAO) {
+        this.customerDAO = Objects.requireNonNull(customerDAO, "customerDAO must not be null");
+    }
 
-	public AuthService(AccountService accountService, FileHandler fileHandler) {
-		this(accountService, fileHandler, null);
-	}
+    public Customer login(String phoneNumber, String pin) throws InvalidPinException {
+        if (phoneNumber == null || pin == null) {
+            throw new InvalidPinException("Invalid phone number or PIN.");
+        }
 
-	public AuthService(AccountService accountService, FileHandler fileHandler, CustomerDAO customerDAO) {
-		this.accountService = Objects.requireNonNull(accountService, "accountService must not be null");
-		this.fileHandler = fileHandler == null ? new FileHandler() : fileHandler;
-		this.customerDAO = customerDAO;
-	}
+        try {
+            Customer customer = customerDAO.findByPhone(phoneNumber);
+            if (!isPinValid(customer, pin)) {
+                throw new InvalidPinException("Invalid phone number or PIN.");
+            }
+            return customer;
+        } catch (InvalidPinException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to lookup customer in PostgreSQL: " + exception.getMessage());
+            throw new InvalidPinException("Invalid phone number or PIN.");
+        }
+    }
 
-	public Customer login(String phoneNumber, String pin) throws InvalidPinException {
-		Customer customer = findCustomerByPhoneNumber(phoneNumber);
-		if (customer == null && customerDAO != null) {
-			try {
-				customer = customerDAO.findByPhone(phoneNumber);
-			} catch (Exception exception) {
-				System.err.println("Warning: Failed to lookup customer in PostgreSQL: " + exception.getMessage());
-			}
-		}
-		
-		if (!isPinValid(customer, pin)) {
-			throw new InvalidPinException("Invalid phone number or PIN.");
-		}
+    public boolean changePin(String phoneNumber, String currentPin, String newPin) throws InvalidPinException {
+        return changePin(login(phoneNumber, currentPin), currentPin, newPin);
+    }
 
-		return customer;
-	}
+    public boolean changePin(Customer customer, String currentPin, String newPin) throws InvalidPinException {
+        if (!isPinValid(customer, currentPin)) {
+            throw new InvalidPinException("Invalid current PIN.");
+        }
 
-	public boolean changePin(String phoneNumber, String currentPin, String newPin) throws InvalidPinException {
-		Customer customer = login(phoneNumber, currentPin);
-		return changePin(customer, currentPin, newPin);
-	}
+        if (newPin == null || newPin.trim().isEmpty()) {
+            throw new InvalidPinException("New PIN must not be blank.");
+        }
 
-	public boolean changePin(Customer customer, String currentPin, String newPin) throws InvalidPinException {
-		if (!isPinValid(customer, currentPin)) {
-			throw new InvalidPinException("Invalid current PIN.");
-		}
+        String normalizedPin = newPin.trim();
+        customer.setPin(normalizedPin);
 
-		if (newPin == null || newPin.trim().isEmpty()) {
-			throw new InvalidPinException("New PIN must not be blank.");
-		}
+        try {
+            Customer persistedCustomer = customerDAO.findByPhone(customer.getPhoneNumber());
+            if (persistedCustomer == null) {
+                persistedCustomer = customer;
+            }
+            persistedCustomer.setPin(normalizedPin);
+            customerDAO.update(persistedCustomer);
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to update PIN in PostgreSQL: " + exception.getMessage());
+        }
 
-		String normalizedPin = newPin.trim();
-		customer.setPin(normalizedPin);
-		fileHandler.saveCustomer(customer);
-		
-		if (customerDAO != null) {
-			try {
-				Customer persistedCustomer = customerDAO.findByPhone(customer.getPhoneNumber());
-				if (persistedCustomer == null) {
-					persistedCustomer = customer;
-				} else {
-					persistedCustomer.setPin(normalizedPin);
-				}
-				persistedCustomer.setPin(normalizedPin);
-				customerDAO.update(persistedCustomer);
-			} catch (Exception exception) {
-				System.err.println("Warning: Failed to update PIN in PostgreSQL: " + exception.getMessage());
-			}
-		}
-		
-		return true;
-	}
+        return true;
+    }
 
-	public boolean validateCustomerPin(Customer customer, String pin) {
-		return isPinValid(customer, pin);
-	}
+    public boolean validateCustomerPin(Customer customer, String pin) {
+        return isPinValid(customer, pin);
+    }
 
-	private Customer findCustomerByPhoneNumber(String phoneNumber) {
-		if (phoneNumber == null) {
-			return null;
-		}
-
-		return accountService.getCustomers().stream()
-				.filter(customer -> phoneNumber.equals(customer.getPhoneNumber()))
-				.findFirst()
-				.orElse(null);
-	}
-
-	private boolean isPinValid(Customer customer, String pin) {
-		return customer != null
-				&& customer.getPin() != null
-				&& pin != null
-				&& customer.getPin().equals(pin.trim());
-	}
+    private boolean isPinValid(Customer customer, String pin) {
+        return customer != null
+                && customer.getPin() != null
+                && pin != null
+                && customer.getPin().equals(pin.trim());
+    }
 }
