@@ -16,6 +16,8 @@ public class CustomerDAOImpl implements CustomerDAO {
     private static final String FIND_BY_PHONE_SQL = "SELECT id, full_name, phone_number, pin FROM customers WHERE phone_number = ?";
     private static final String FIND_BY_ID_SQL = "SELECT id, full_name, phone_number, pin FROM customers WHERE id = ?";
     private static final String FIND_ALL_SQL = "SELECT id, full_name, phone_number, pin FROM customers ORDER BY id";
+    private static final String UPDATE_SQL = "UPDATE customers SET full_name = ?, phone_number = ?, pin = ? WHERE id = ?";
+    private static final String DELETE_SQL = "DELETE FROM customers WHERE id = ?";
 
     @Override
     public void save(Customer customer) {
@@ -89,12 +91,29 @@ public class CustomerDAOImpl implements CustomerDAO {
 
     @Override
     public void update(Customer customer) {
-        throw new UnsupportedOperationException("update not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(UPDATE_SQL)) {
+
+            statement.setString(1, customer.getFullName());
+            statement.setString(2, customer.getPhoneNumber());
+            statement.setString(3, customer.getPin());
+            statement.setInt(4, parseCustomerId(customer.getCustomerId()));
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to update customer", exception);
+        }
     }
 
     @Override
     public void delete(Integer id) {
-        throw new UnsupportedOperationException("delete not implemented yet");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(DELETE_SQL)) {
+
+            statement.setInt(1, id);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new RuntimeException("Failed to delete customer", exception);
+        }
     }
 
     private Customer mapCustomer(ResultSet resultSet) throws SQLException {
@@ -103,5 +122,13 @@ public class CustomerDAOImpl implements CustomerDAO {
         String phoneNumber = resultSet.getString("phone_number");
         String pin = resultSet.getString("pin");
         return new Customer(customerId, fullName, null, phoneNumber, pin);
+    }
+
+    private int parseCustomerId(String customerId) {
+        try {
+            return Integer.parseInt(customerId);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Customer ID must be numeric for JDBC update", exception);
+        }
     }
 }
