@@ -185,6 +185,24 @@ public class TransactionService {
         }
     }
 
+    public List<Transaction> getTransactionHistoryForAccountFromDB(Integer accountDatabaseId) {
+        if (accountDatabaseId == null || transactionDAO == null) {
+            return List.of();
+        }
+        
+        try {
+            List<Transaction> transactions = new ArrayList<>();
+            // Get transactions where this account is the source
+            transactions.addAll(transactionDAO.findBySourceAccountDatabaseId(accountDatabaseId));
+            // Get transactions where this account is the destination
+            transactions.addAll(transactionDAO.findByDestinationAccountDatabaseId(accountDatabaseId));
+            return transactions;
+        } catch (Exception exception) {
+            System.err.println("Warning: Failed to load transaction history from PostgreSQL: " + exception.getMessage());
+            return List.of();
+        }
+    }
+
     // Load a transaction from file into memory without writing back to disk
     public void loadTransaction(Transaction transaction) {
         if (transaction == null) return;
