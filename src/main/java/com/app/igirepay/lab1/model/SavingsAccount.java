@@ -87,12 +87,6 @@ public class SavingsAccount extends Account {
 
 	@Override
 	public String toString() {
-		return "SavingsAccount{" +
-				"accountId='" + getAccountId() + '\'' +
-				", customerId='" + getCustomerId() + '\'' +
-				", balance=" + getBalance() +
-				", withdrawalFee=" + WITHDRAWAL_FEE +
-				", minimumBalance=" + minimumBalance +
-				'}';
+		return super.toString();
 	}
 }

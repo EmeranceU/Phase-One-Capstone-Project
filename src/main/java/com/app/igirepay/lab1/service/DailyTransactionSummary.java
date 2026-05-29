@@ -1,6 +1,8 @@
 package com.app.igirepay.lab1.service;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 public class DailyTransactionSummary {
 
@@ -48,6 +50,7 @@ public class DailyTransactionSummary {
     }
 
     private String formatAmount(BigDecimal amount) {
-        return amount == null ? "0" : amount.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString();
+        BigDecimal value = amount == null ? BigDecimal.ZERO : amount;
+        return NumberFormat.getNumberInstance(Locale.US).format(value.stripTrailingZeros());
     }
 }

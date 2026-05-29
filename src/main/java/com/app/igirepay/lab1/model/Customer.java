@@ -106,14 +106,6 @@ public class Customer {
 
 	@Override
 	public String toString() {
-		return "Customer{" +
-				"databaseId=" + databaseId +
-				", customerId='" + customerId + '\'' +
-				", fullName='" + fullName + '\'' +
-				", email='" + email + '\'' +
-				", phoneNumber='" + phoneNumber + '\'' +
-				", pinSet=" + (pin != null && !pin.isBlank()) +
-				", accounts=" + accounts.size() +
-				'}';
+		return fullName + " (" + phoneNumber + ")";
 	}
 }

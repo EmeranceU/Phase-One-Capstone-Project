@@ -1,6 +1,8 @@
 package com.app.igirepay.lab1.model;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.Locale;
 import java.util.Objects;
 
 
@@ -98,12 +100,11 @@ public abstract class Account {
 
 	@Override
 	public String toString() {
-		return "Account{" +
-				"databaseId=" + databaseId +
-				", customerDatabaseId=" + customerDatabaseId +
-				", accountId='" + accountId + '\'' +
-				", customerId='" + customerId + '\'' +
-				", balance=" + balance +
-				'}';
+		return getClass().getSimpleName() + " | " + accountId + " | Balance: " + formatAmount(balance) + " RWF";
+	}
+
+	private String formatAmount(BigDecimal amount) {
+		BigDecimal value = amount == null ? BigDecimal.ZERO : amount;
+		return NumberFormat.getNumberInstance(Locale.US).format(value.stripTrailingZeros());
 	}
 }

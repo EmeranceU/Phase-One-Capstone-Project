@@ -1,9 +1,14 @@
 package com.app.igirepay.lab1.model;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class Loan {
+
+	private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
 	private Integer databaseId;
 	private Integer customerDatabaseId;
@@ -99,16 +104,53 @@ public class Loan {
 
 	@Override
 	public String toString() {
-		return "Loan{" +
-				"databaseId=" + databaseId +
-				", customerDatabaseId=" + customerDatabaseId +
-				", loanId='" + loanId + '\'' +
-				", customerId='" + customerId + '\'' +
-				", amount=" + amount +
-				", interestRate=" + interestRate +
-				", approved=" + approved +
-				", repaymentStatus='" + repaymentStatus + '\'' +
-				", timestamp=" + timestamp +
-				'}';
+		StringBuilder builder = new StringBuilder();
+		builder.append("Loan Amount: ")
+				.append(formatAmount(amount))
+				.append(" RWF\n")
+				.append("Interest Rate: ")
+				.append(formatInterestRate(interestRate))
+				.append("\n")
+				.append("Status: ")
+				.append(approved ? "Approved" : "Rejected")
+				.append("\n");
+
+		if (!approved) {
+			builder.append("Reason: ")
+					.append(cleanReason(repaymentStatus))
+					.append("\n");
+		}
+
+		builder.append("Date: ")
+				.append(formatTimestamp(timestamp));
+		return builder.toString();
+	}
+
+	private String formatAmount(BigDecimal value) {
+		BigDecimal amountValue = value == null ? BigDecimal.ZERO : value;
+		return NumberFormat.getNumberInstance(Locale.US).format(amountValue.stripTrailingZeros());
+	}
+
+	private String formatInterestRate(BigDecimal value) {
+		BigDecimal rateValue = value == null ? BigDecimal.ZERO : value.stripTrailingZeros();
+		return NumberFormat.getNumberInstance(Locale.US).format(rateValue) + "%";
+	}
+
+	private String cleanReason(String value) {
+		if (value == null || value.isBlank()) {
+			return "-";
+		}
+
+		String trimmed = value.trim();
+		String prefix = "REJECTED:";
+		if (trimmed.regionMatches(true, 0, prefix, 0, prefix.length())) {
+			return trimmed.substring(prefix.length()).trim();
+		}
+
+		return trimmed;
+	}
+
+	private String formatTimestamp(LocalDateTime value) {
+		return value == null ? "-" : value.format(DISPLAY_TIMESTAMP);
 	}
 }

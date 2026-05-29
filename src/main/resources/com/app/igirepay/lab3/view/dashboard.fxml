@@ -88,7 +88,7 @@
             </HBox>
 
             <HBox spacing="10.0">
-                <TextField fx:id="recipientPhoneField" promptText="Recipient phone (for transfer)" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="recipientPhoneField" promptText="Recipient phone or savings account ID" HBox.hgrow="ALWAYS"/>
                 <TextField fx:id="referenceField" promptText="Reference ID" HBox.hgrow="ALWAYS"/>
             </HBox>
 
