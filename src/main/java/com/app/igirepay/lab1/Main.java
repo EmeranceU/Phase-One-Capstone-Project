@@ -323,22 +323,12 @@ public class Main {
         }
 
         BigDecimal amount = readAmount(scanner, "Transfer amount: ");
-        String destinationPhoneNumber = readText(scanner, "Recipient phone number: ");
+        String destinationInput = readText(scanner, "Recipient phone number or savings account ID: ");
         String referenceId = readText(scanner, "Reference ID: ");
 
-        Customer recipient = null;
-        if (customerDAO != null) {
-            recipient = customerDAO.findByPhone(destinationPhoneNumber);
-        }
-
-        if (recipient == null) {
-            System.out.println("Transfer failed: recipient not found.");
-            return;
-        }
-
-        Account destinationAccount = findRecipientWalletAccount(accountService, recipient);
+        Account destinationAccount = resolveTransferDestination(accountService, customerDAO, destinationInput);
         if (destinationAccount == null) {
-            System.out.println("Transfer failed: recipient has no wallet account.");
+            System.out.println("Transfer failed: destination account not found.");
             return;
         }
 
@@ -353,7 +343,7 @@ public class Main {
 
         try {
             transactionService.processTransfer(accountService, loggedInCustomer, transaction);
-            System.out.println("Transfer successful: " + sourceAccount.getAccountId() + " -> " + destinationAccount.getAccountId() + " | Source balance: " + sourceAccount.getBalance() + " | Destination balance: " + destinationAccount.getBalance());
+            System.out.println("Transfer successful: " + sourceAccount.getAccountId() + " -> " + destinationAccount.getAccountId() + " | Source balance: " + formatAmount(sourceAccount.getBalance()) + " | Destination balance: " + formatAmount(destinationAccount.getBalance()));
         } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
             System.out.println("Transfer failed: " + exception.getMessage());
         }
@@ -367,7 +357,7 @@ public class Main {
         }
 
         accounts.forEach(account ->
-                System.out.println(account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + account.getBalance()));
+            System.out.println(account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + formatAmount(account.getBalance())));
     }
 
     private static void checkAccountBalance(AccountService accountService, Customer loggedInCustomer) {
@@ -380,7 +370,7 @@ public class Main {
         System.out.println("Account balances:");
         accounts.forEach(account ->
                 System.out.println(account.getClass().getSimpleName() + " | "
-                        + account.getAccountId() + " | Balance: " + account.getBalance()));
+                + account.getAccountId() + " | Balance: " + formatAmount(account.getBalance())));
     }
 
     private static void viewTransactionHistory(TransactionService transactionService, Customer loggedInCustomer) {
@@ -400,7 +390,7 @@ public class Main {
         BigDecimal amount = readAmount(scanner, "Loan amount: ");
         Loan loan = loanService.requestLoan(loggedInCustomer, amount);
         if (loan.isApproved()) {
-            System.out.println("Loan approved: " + loan);
+            System.out.println(loan);
         } else {
             System.out.println(loan.getRepaymentStatus());
         }
@@ -451,6 +441,29 @@ public class Main {
         return null;
     }
 
+    private static Account resolveTransferDestination(AccountService accountService, CustomerDAO customerDAO, String destinationInput) {
+        String value = destinationInput == null ? "" : destinationInput.trim();
+        if (value.isEmpty()) {
+            return null;
+        }
+
+        Account destinationAccount = accountService.findAccountById(value);
+        if (destinationAccount != null) {
+            return destinationAccount;
+        }
+
+        if (customerDAO == null) {
+            return null;
+        }
+
+        Customer recipient = customerDAO.findByPhone(value);
+        if (recipient == null) {
+            return null;
+        }
+
+        return findRecipientWalletAccount(accountService, recipient);
+    }
+
     private static List<Account> getFreshCustomerAccounts(AccountService accountService, Customer customer) {
         if (accountService == null || customer == null) {
             return List.of();
@@ -465,7 +478,7 @@ public class Main {
                                          String label) {
         try {
             transactionService.processTransaction(account, transaction);
-            System.out.println(label + " successful: " + account.getAccountId() + " | Balance: " + account.getBalance());
+            System.out.println(label + " successful: " + account.getAccountId() + " | Balance: " + formatAmount(account.getBalance()));
         } catch (DuplicateTransactionException | InvalidAmountException | InsufficientBalanceException exception) {
             System.out.println(label + " failed: " + exception.getMessage());
         }
@@ -512,5 +525,10 @@ public class Main {
 
             System.out.println("Value must not be blank.");
         }
+    }
+
+    private static String formatAmount(BigDecimal amount) {
+        BigDecimal value = amount == null ? BigDecimal.ZERO : amount;
+        return java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(value.stripTrailingZeros()) + " RWF";
     }
 }

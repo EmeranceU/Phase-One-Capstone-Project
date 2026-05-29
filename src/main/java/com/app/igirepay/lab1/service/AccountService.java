@@ -109,11 +109,6 @@ public class AccountService {
         return true;
     }
 
-    /**
-     * Create a wallet account for customer enforcing business rules:
-     * - only one WalletAccount allowed per customer
-     * - returns a user-friendly message describing the outcome
-     */
     public String createWalletAccountForCustomer(String customerId, WalletAccount account) {
         Customer customer = findCustomerById(customerId);
         if (customer == null) {
@@ -137,12 +132,6 @@ public class AccountService {
         return "Wallet account created: " + account.getAccountId();
     }
 
-    /**
-     * Create a savings account for customer enforcing business rules:
-     * - wallet account must exist first
-     * - only one SavingsAccount allowed per customer
-     * - returns user-friendly message describing the outcome
-     */
     public String createSavingsAccountForCustomer(String customerId, SavingsAccount account) {
         Customer customer = findCustomerById(customerId);
         if (customer == null) {

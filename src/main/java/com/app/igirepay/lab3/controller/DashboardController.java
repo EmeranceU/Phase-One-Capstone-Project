@@ -1,9 +1,11 @@
 package com.app.igirepay.lab3.controller;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import com.app.igirepay.lab1.exception.DuplicateTransactionException;
@@ -187,15 +189,8 @@ public class DashboardController {
             return;
         }
 
-        Customer recipient = context.findCustomerByPhone(recipientPhone);
-        if (recipient == null) {
-            setMessage("Recipient not found.", true);
-            return;
-        }
-
-        Account destination = context.findWalletAccountForCustomer(recipient);
+        Account destination = resolveTransferDestination(recipientPhone);
         if (destination == null) {
-            setMessage("Recipient has no wallet account.", true);
             return;
         }
 
@@ -477,8 +472,8 @@ public class DashboardController {
         }
 
         String text = accounts.stream()
-                .map(account -> account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + account.getBalance())
-                .collect(Collectors.joining("\n"));
+            .map(this::formatAccountSummary)
+            .collect(Collectors.joining("\n"));
         outputArea.setText(text);
     }
 
@@ -495,10 +490,10 @@ public class DashboardController {
         Account savingsAccount = context.getAccountService().getSavingsAccountForCustomer(customer.getCustomerId());
 
         walletAccountIdLabel.setText(walletAccount == null ? "No wallet account" : walletAccount.getAccountId());
-        walletBalanceLabel.setText(walletAccount == null ? "Balance: -" : "Balance: " + walletAccount.getBalance());
+        walletBalanceLabel.setText(walletAccount == null ? "Balance: -" : "Balance: " + formatAmount(walletAccount.getBalance()));
 
         savingsAccountIdLabel.setText(savingsAccount == null ? "No savings account" : savingsAccount.getAccountId());
-        savingsBalanceLabel.setText(savingsAccount == null ? "Balance: -" : "Balance: " + savingsAccount.getBalance());
+        savingsBalanceLabel.setText(savingsAccount == null ? "Balance: -" : "Balance: " + formatAmount(savingsAccount.getBalance()));
     }
 
     private BigDecimal parseAmount(String raw, String label) {
@@ -519,6 +514,42 @@ public class DashboardController {
             setMessage(label + " must be a valid number.", true);
             return null;
         }
+    }
+
+    private Account resolveTransferDestination(String rawDestination) {
+        String destinationValue = safeText(rawDestination);
+        if (destinationValue.isEmpty()) {
+            setMessage("Destination account ID or phone is required.", true);
+            return null;
+        }
+
+        Account destinationAccount = context.getAccountService().findAccountById(destinationValue);
+        if (destinationAccount != null) {
+            return destinationAccount;
+        }
+
+        Customer recipient = context.findCustomerByPhone(destinationValue);
+        if (recipient == null) {
+            setMessage("Destination account not found.", true);
+            return null;
+        }
+
+        Account walletAccount = context.getAccountService().getWalletAccountForCustomer(recipient.getCustomerId());
+        if (walletAccount == null) {
+            setMessage("Recipient has no wallet account.", true);
+            return null;
+        }
+
+        return walletAccount;
+    }
+
+    private String formatAccountSummary(Account account) {
+        return account.getClass().getSimpleName() + " | " + account.getAccountId() + " | Balance: " + formatAmount(account.getBalance());
+    }
+
+    private String formatAmount(BigDecimal amount) {
+        BigDecimal value = amount == null ? BigDecimal.ZERO : amount;
+        return NumberFormat.getNumberInstance(Locale.US).format(value.stripTrailingZeros()) + " RWF";
     }
 
     private String safeText(String value) {

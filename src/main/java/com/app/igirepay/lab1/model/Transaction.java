@@ -1,9 +1,14 @@
 package com.app.igirepay.lab1.model;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class Transaction {
+
+	private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
 	private Integer databaseId;
 	private Integer customerDatabaseId;
@@ -127,19 +132,60 @@ public class Transaction {
 
 	@Override
 	public String toString() {
-		return "Transaction{" +
-				"databaseId=" + databaseId +
-				", customerDatabaseId=" + customerDatabaseId +
-				", accountDatabaseId=" + accountDatabaseId +
-				", destinationAccountDatabaseId=" + destinationAccountDatabaseId +
-				", transactionId='" + transactionId + '\'' +
-				", customerId='" + customerId + '\'' +
-				", accountId='" + accountId + '\'' +
-				", destinationAccountId='" + destinationAccountId + '\'' +
-				", referenceId='" + referenceId + '\'' +
-				", amount=" + amount +
-				", transactionType='" + transactionType + '\'' +
-				", timestamp=" + timestamp +
-				'}';
+		StringBuilder builder = new StringBuilder();
+		builder.append(formatTransactionType(transactionType))
+				.append(" • ")
+				.append(formatAmount(amount))
+				.append(" RWF\n");
+
+		if (isTransferType(transactionType) && destinationAccountId != null && !destinationAccountId.isBlank()) {
+			builder.append("To Account: ").append(destinationAccountId).append('\n');
+		}
+
+		builder.append("Reference ID: ")
+				.append(referenceId == null || referenceId.isBlank() ? "-" : referenceId)
+				.append('\n')
+				.append("Date: ")
+				.append(formatTimestamp(timestamp));
+		return builder.toString();
+	}
+
+	private String formatTransactionType(String value) {
+		if (value == null || value.isBlank()) {
+			return "Transaction";
+		}
+
+		String normalized = value.trim().toUpperCase(Locale.US);
+		if ("DEPOSIT".equals(normalized)) {
+			return "Deposit";
+		}
+
+		if ("WITHDRAWAL".equals(normalized)) {
+			return "Withdrawal";
+		}
+
+		if ("TRANSFER".equals(normalized) || "TRANSFER_IN".equals(normalized) || "TRANSFER_OUT".equals(normalized)) {
+			return "Transfer";
+		}
+
+		return normalized.substring(0, 1) + normalized.substring(1).toLowerCase(Locale.US);
+	}
+
+	private boolean isTransferType(String value) {
+		if (value == null) {
+			return false;
+		}
+
+		String normalized = value.trim().toUpperCase(Locale.US);
+		return "TRANSFER".equals(normalized) || "TRANSFER_IN".equals(normalized) || "TRANSFER_OUT".equals(normalized);
+	}
+
+	private String formatAmount(BigDecimal value) {
+		BigDecimal amountValue = value == null ? BigDecimal.ZERO : value;
+		return NumberFormat.getNumberInstance(Locale.US).format(amountValue.stripTrailingZeros());
+	}
+
+	private String formatTimestamp(LocalDateTime value) {
+		return value == null ? "-" : value.format(DISPLAY_TIMESTAMP);
 	}
 }
